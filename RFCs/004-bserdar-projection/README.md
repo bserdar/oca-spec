@@ -32,161 +32,48 @@ overlay would make the subset and mapping overlays obsolete.
 
 ## Tutorial
 
-The projection overlay specifies a source schema, an optional target
-schema, and how target data objects are constructed using the fields
-of the source objects:
-
-{
-   source: <schema reference>
-   target: <schema reference>
-   
-   projection: { object_definition }
-   
-}
-
-
-
-
-Object definition describes how a new object can be constructed from
-the elements of the source object. It does this by first selecting the
-parts of the source document into the current context, and then
-assigning them to new data elements using rules:
-
-object_definition: {
-   context: { context_definition }
-   rules: [ rule_definition, ...]
-}
-
-The `context_definition` part defines the data elements to be used in
-the current and nested objects:
-
-context_definition: {
-   name: selector,
-   ...
-}
-
-Here, `selector` selects an element of the source document using the
-current context, and exposes that selected element under the new name
-`name`.
-
-As an example, consider the following source object segment:
+We will work through an example where the input to the system is a FHIR bundle 
+containing patient information and immunization records, and the output is a
+document that will be used as claims for VC generation. Suppose the target 
+schema is:
 
 ```
 {
-  "entry": [
-     {
-        "resource": {
-          ...
-        }
-     }
-  ]
-}
-
-```
-
-The following context selects the `resource` of the first entry and exposes that as
-`rsc`:
-
-```
-context: {
-   "rsc": "/entry/0/resource"
-}
-```
-
-A richer, XPath-like selector format is possible:
-
-```
-context: {
-  "rsc": "/entry/*/resource[resourceType='Patient']"
-}
-```
-which will select the resource with `resourceType=Patient`.
-
-
-Field selectors in rules and nested object_definitions can use "@rsc" to
-refer to the selected object.
-
-
-Rules section is a section of field definitions:
-
-```
-rules: [ rule_definition,...]
-```
-
-Each `rule_definition` can be used to define a mapped field, object field, or an
-array field:
-
-```
-rule_definition : map_definition | object_definition | array_definition
-```
-
-A `map_definition` simply selects an element from the source document.
-
-```
-map_definition: {
-  target: name,
-  source: selector
-}
-```
-
-
-{
-  context: {
-     name : selector
-     ...
+  holder: {
+    ID
+    GivenName
+    FamilyName
+    BirthDate
   },
-  rules: [
+  vaccine: {
+    vaccineCode
+    vaccineManufacturer
+    vaccineLotNumber
+    totalDosesRequired
+  },
+  vaccinationEvent: [
     {
-      target: name,
-      source: context name
+      vaccinationDate
+      doseNumber
+      practitionerID
+      facilityID
     },
-    {
-      target: name,
-      object: <object definition>
-    },
-    {
-      target: name,
-      source: context name,
-      items: <object definition>
-    }
+    ...
   ]
 }
+```
 
 
-Consider the following example FHIR bundle containing a patient record:
+The sample input is the following entry from Synthea synthetic patient
+record (edited):
 
+```
 {
     "entry": [
         {
-            "fullUrl": "urn:uuid:83a77de9-dba0-4b41-be47-50e26e89d849",
             "resource": {
                 "resourceType": "Patient",
-                "address": [
-                    {
-                        "city": "Longmeadow",
-                        "country": "US",
-                         "line": [
-                            "221 Schimmel Rapid",
-                            "Suite 633"
-                        ],
-                        "postalCode": "01116",
-                        "state": "MA"
-                    }
-                ],
                 "birthDate": "1946-12-03",
-                "communication": [
-                    {
-                        "language": {
-                            "coding": [
-                                {
-                                    "code": "en-US",
-                                    "display": "English (United States)",
-                                    "system": "http://hl7.org/fhir/ValueSet/languages"
-                                }
-                            ]
-                        }
-                    }
-                ],
                 "gender": "male",
                 "id": "83a77de9-dba0-4b41-be47-50e26e89d849",
                 "name": [
@@ -202,11 +89,110 @@ Consider the following example FHIR bundle containing a patient record:
                     }
                 ]
             }
-        }
+        },
+        {
+           "resource": {
+             "resourceType": "Immunization",
+              "occurenceDatetime": "2008-07-09T12:31:52-04:00",
+              "encounter": {
+               "reference": "urn:uuid:95845705-f125-40d5-ada8-baf4d94a10ea"
+              },
+             "status": "completed",
+             "vaccineCode": {
+               "coding": [
+                 {
+                   "code": "140",
+                   "display": "Influenza, seasonal, injectable, preservative free",
+                   "system": "http://hl7.org/fhir/sid/cvx"
+                 }
+              ],
+            }
+          }
+       },
     ],
     "resourceType": "Bundle",
     "type": "collection"
 }
+```
+
+The projection overlay specifies a field-by-field mapping to construct the target
+data object
+
+```
+sourceSchema: <link to FHIR schema>
+targetSchema: <link to VC schema>
+selectorDialect: jsonpath
+
+object: {
+  properties: {
+    holder: {
+      object: {
+        scope: {
+           patient: /entry/[?(@.resource.resourceType='patient')]
+        },
+        properties: {
+          ID : {
+            context: patient
+            source: /id  (83a77de9-dba0-4b41-be47-50e26e89d849)
+          },
+          GivenName: {
+            context: patient
+            source: /name[0]/given[0]   (Benito349)
+          },
+          FamilyName: {
+            context: patient
+            source: /name[0]/family   (Reilly95)
+         },
+         BirthDate: {
+            context: patient
+            source: /birthDate   (1946-12-03)
+         }
+       }
+    }
+  },
+  vaccine: {
+     object: {
+       scope: {
+         immunization: /entry/[?(@.resource.resourceType='Immunization' and @.resource.vaccineCode='code')][0]
+       },
+       properties: {
+         vaccineCode: {
+           context: immunization
+           source: /vaccineCode/coding[?(@.code='code' and @.system='system')] (140)
+         },
+         totalDosesRequired: {
+           context: immunization,
+           source: /protocolApplied/seriesDoses/seriesDosesPositiveInt (null)
+         }
+       }
+    }
+ },
+ vaccinationEvent: {
+    array: {
+      scope: {
+         immunization: /entry/[?(@.resource.resourceType='Immunization' and @.resource.vaccineCode='code')]
+      },
+      items: {
+        item: {
+          context: immunization
+          items: @
+        },
+        object: {
+          properties: {
+            vaccinationDate: {
+               source: /occurenceDateTime  (2008-07-09T12:31:52-04:00)
+            },
+            doseNumber: {
+               source: /
+      },
+      ...
+    }
+  }
+}
+
+```
+
+
 
 
 
