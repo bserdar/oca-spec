@@ -39,20 +39,16 @@ schema is:
 
 ```
 {
-  holder: {
-    ID
-    GivenName
-    FamilyName
-    BirthDate
-  },
-  vaccine: {
-    vaccineCode
-    vaccineManufacturer
-    vaccineLotNumber
-    totalDosesRequired
-  },
-  vaccinationEvent: [
+  holderID
+  holderGivenName
+  holderFamilyName
+  holderBirthDate
+  vaccinationEvents: [
     {
+      vaccineCode
+      vaccineManufacturer
+      vaccineLotNumber
+      totalDosesRequired
       vaccinationDate
       doseNumber
       practitionerID
@@ -124,32 +120,58 @@ targetSchema: <link to VC schema>
 selectorDialect: jsonpath
 
 object: {
-  properties: {
-    holder: {
-      object: {
-        scope: {
-           patient: /entry/[?(@.resource.resourceType='patient')]
-        },
-        properties: {
-          ID : {
-            context: patient
-            source: /id  (83a77de9-dba0-4b41-be47-50e26e89d849)
-          },
-          GivenName: {
-            context: patient
-            source: /name[0]/given[0]   (Benito349)
-          },
-          FamilyName: {
-            context: patient
-            source: /name[0]/family   (Reilly95)
-         },
-         BirthDate: {
-            context: patient
-            source: /birthDate   (1946-12-03)
-         }
-       }
-    }
+  scope: {
+     patient: /entry/[?(@.resource.resourceType='patient')]
   },
+  properties: {
+     holderID : {
+          context: patient
+          source: /id  (83a77de9-dba0-4b41-be47-50e26e89d849)
+     },
+     holderGivenName: {
+         context: patient
+         source: /name[0]/given[0]   (Benito349)
+     },
+     holderFamilyName: {
+         context: patient
+         source: /name[0]/family   (Reilly95)
+     },
+     holderBirthDate: {
+         context: patient
+         source: /birthDate   (1946-12-03)
+     },
+     vaccinationEvents: {
+       array: {
+          scope: {
+            immunization: /entry/[?(@.resource.resourceType='Immunization' and @.resource.vaccineCode='code')]
+          },
+          items: {
+        item: {
+          context: immunization
+          items: @
+        },
+        object: {
+          properties: {
+            vaccinationDate: {
+               source: /occurenceDateTime  (2008-07-09T12:31:52-04:00)
+            },
+            doseNumber: {
+               source: /
+      },
+      ...
+    }
+  }
+}
+
+```
+
+The output would be:
+holder: {
+  ID: 83a77de9-dba0-4b41-be47-50e26e89d849
+  GivenName: Benito34
+  FamilyName: Reilly95
+  BirthDate: 1946-12-03
+}
   vaccine: {
      object: {
        scope: {
@@ -189,9 +211,6 @@ object: {
     }
   }
 }
-
-```
-
 
 
 
