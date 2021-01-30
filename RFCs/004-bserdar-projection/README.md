@@ -14,21 +14,23 @@ the target.
 
 ## Motivation
 
-Projection overlay is especially needed in data exchange use-cases
+The need for projection overlay arose in the context of generating a
+vaccination certificate from FHIR messages. The projection overlay can
+specify how to build most, if not all of the fields necessary to build
+such a certificate that later can be signed to produce a
+VC. Projection overlay is also needed in data exchange use-cases
 where the input data schema is different from the exchange data
-schema, which can also be different from the storage schema. The
-projection overlay defines a semantic association between the fields
-of two schemas as well as a method for unidirectional transformations.
-It may be possible that some use cases may require additional
-application-specific processing to implement a usable
-mapping. Projection overlay is also useful in data procesing pipelines
-to build data objects by selecting parts of the input, for instance,
-for generating cryptographic hashes, or VCs.
+schema, which can also be different from the storage schema. 
+
+The projection overlay defines a semantic association between the
+fields of two schemas as well as a method for unidirectional
+transformations.  It may be possible that some use cases may require
+additional application-specific processing to implement a usable
+mapping. 
 
 The current OCA specification already contains a subset overlay and a
 mapping overlay that work similarly. The addition of projection
 overlay would make the subset and mapping overlays obsolete.
-
 
 ## Tutorial
 
@@ -39,29 +41,22 @@ generation. Suppose the target schema is:
 
 ```
 {
-  holderID
-  holderGivenName
-  holderFamilyName
-  holderBirthDate
-  vaccinationEvents: [
-    {
-      vaccineCode
-      vaccineManufacturer
-      vaccineLotNumber
-      totalDosesRequired
-      vaccinationDate
-      doseNumber
-      practitionerID
-      facilityID
-    },
-    ...
-  ]
+  recip_id
+  recip_first_name
+  recip_middle_name
+  recip_last_name
+  recip_dob
+  ...
+  cvx
+  ndc
+  mvx
+  vax_expiration
+  ...
 }
 ```
 
 
-The sample input is the following entry from Synthea synthetic patient
-record (edited):
+Using the following sample input:
 
 ```
 {
@@ -88,24 +83,51 @@ record (edited):
         },
         {
            "resource": {
-             "resourceType": "Immunization",
-              "occurenceDatetime": "2008-07-09T12:31:52-04:00",
-              "encounter": {
-               "reference": "urn:uuid:95845705-f125-40d5-ada8-baf4d94a10ea"
-              },
-             "status": "completed",
-             "vaccineCode": {
+               "status": "completed",
+               "vaccineCode": {
                "coding": [
-                 {
-                   "code": "140",
-                   "display": "Influenza, seasonal, injectable, preservative free",
-                   "system": "http://hl7.org/fhir/sid/cvx"
-                 }
+                  {
+                   "system": ""
+                   "code": "
+                  }
               ],
-            }
-          }
+           },
+          "occurrenceDateTime": "2013-01-10",
+          "primarySource": true,
+          "location": {
+             "reference": "Location/1"
+           },
+          "manufacturer": {
+             "reference": "Organization/hl7"
+          },
+          "lotNumber": "AAJN11K",
+          "expirationDate": "2015-02-15",
+          "site": {
+            "coding": [
+               {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-ActSite",
+                "code": "LA",
+                "display": "left arm"
+               }
+            ]
+         },
+        "route": {
+           "coding": [
+              {
+               "system": "http://terminology.hl7.org/CodeSystem/v3-RouteOfAdministration",
+               "code": "IM",
+               "display": "Injection, intramuscular"
+             }
+           ]
+        },
+       "doseQuantity": {
+            "value": 5,
+            "system": "http://unitsofmeasure.org",
+            "code": "mg"
        },
-    ],
+        ...
+      }
+   ],
     "resourceType": "Bundle",
     "type": "collection"
 }
@@ -117,107 +139,81 @@ the target data object
 ```
 sourceSchema: <link to FHIR schema>
 targetSchema: <link to VC schema>
-selectorDialect: jsonpath
+dialect: jsonpath
 
 object: {
   scope: {
-     patient: /entry/[?(@.resource.resourceType='patient')]
+     patient: /entry/[?(@.resource.resourceType='Patient')]
+     immunization: /entry/[?(@.resource.resourceType='Immunization' and @.resource.vaccineCode.coding.code='<vaccinde code>')]
   },
   properties: {
-     holderID : {
-          context: patient
-          source: /id  (83a77de9-dba0-4b41-be47-50e26e89d849)
+     recip_id_id : {
+          scope: patient
+          source: /id
      },
-     holderGivenName: {
-         context: patient
-         source: /name[0]/given[0]   (Benito349)
+     recip_first_name_id: {
+         scope: patient
+         source: /name[0]/given[0]
      },
-     holderFamilyName: {
-         context: patient
-         source: /name[0]/family   (Reilly95)
+     recip_last_name_id: {
+         scope: patient
+         source: /name[0]/family
      },
-     holderBirthDate: {
-         context: patient
-         source: /birthDate   (1946-12-03)
+     recip_dob_id: {
+         scope: patient
+         source: /birthDate
      },
-     vaccinationEvents: {
-       array: {
-          scope: {
-            immunization: /entry/[?(@.resource.resourceType='Immunization' and @.resource.vaccineCode='code')]
-          },
-          items: {
-        item: {
-          context: immunization
-          items: @
-        },
-        object: {
-          properties: {
-            vaccinationDate: {
-               source: /occurenceDateTime  (2008-07-09T12:31:52-04:00)
-            },
-            doseNumber: {
-               source: /
-      },
-      ...
-    }
+     cvx_id: {
+         scope: immunization
+         source: /vaccineCode/coding/[?(@.system='http://hl7.org/fhir/sid/cvx')]/code
+     },
+     ndc_id: {
+         scope: immunization
+         source: /vaccineCode/coding/[?(@.system='http://hl7.org/fhir/sid/ndc)]/code
+     },
+     ...
   }
 }
-
 ```
 
-The output would be:
-holder: {
-  ID: 83a77de9-dba0-4b41-be47-50e26e89d849
-  GivenName: Benito34
-  FamilyName: Reilly95
-  BirthDate: 1946-12-03
+The `dialect' specifies method that selects the fields of the source
+object.  If unspecified, attribute keys of the source object can be
+directly selected to produce the target object, similar to the
+existing subset overlay. Based on the source message type, the dialect
+can be XPath (for XML messages), FHIRPath (for FHIR objects), JSONPath
+(XPath extended to JSON objects), etc.
+
+The projection overlay follows the structure of the target schema. For
+each attribute of the target schema, the overlay defines an expression
+that will be evaluated on the source data object. The `scope` object
+selects relevant elements of the source:
+
+```
+scope: {
+     patient: /entry/[?(@.resource.resourceType='Patient')]
+     immunization: /entry/[?(@.resource.resourceType='Immunization' and @.resource.vaccineCode.coding.code='<vaccinde code>')]
 }
-  vaccine: {
-     object: {
-       scope: {
-         immunization: /entry/[?(@.resource.resourceType='Immunization' and @.resource.vaccineCode='code')][0]
-       },
-       properties: {
-         vaccineCode: {
-           context: immunization
-           source: /vaccineCode/coding[?(@.code='code' and @.system='system')] (140)
-         },
-         totalDosesRequired: {
-           context: immunization,
-           source: /protocolApplied/seriesDoses/seriesDosesPositiveInt (null)
-         }
-       }
-    }
- },
- vaccinationEvent: {
-    array: {
-      scope: {
-         immunization: /entry/[?(@.resource.resourceType='Immunization' and @.resource.vaccineCode='code')]
-      },
-      items: {
-        item: {
-          context: immunization
-          items: @
-        },
-        object: {
-          properties: {
-            vaccinationDate: {
-               source: /occurenceDateTime  (2008-07-09T12:31:52-04:00)
-            },
-            doseNumber: {
-               source: /
-      },
-      ...
-    }
-  }
-}
+```
+
+The JSONPath for the `patient` selects the entry with
+`resourceType=Patient`. The JSONPath for the `immunization` select the entry with `resourceType=Immunization`, containing the required vaccine code.
+
+The target attributes are populated by optionally selecting a scope,
+and then selecting an element of that scope. For instance:
+
+```
+     ndc_id: {
+         scope: immunization
+         source: /vaccineCode/coding/[?(@.system='http://hl7.org/fhir/sid/ndc)]/code
+     }
+```
+
+The above rule populates the `ndc` field by selecting the `code` from
+the immunization record coding fields that has a code in `NDC` system.
 
 
-
-
-Explain the proposal as if it were already implemented and you
-were teaching it to another OCA consumer. That generally
-means:
+Explain the proposal as if it were already implemented and you were
+teaching it to another OCA consumer. That generally means:
 
 - Introducing new named concepts.
 - Explaining the feature largely in terms of examples.
