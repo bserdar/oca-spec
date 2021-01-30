@@ -32,10 +32,10 @@ overlay would make the subset and mapping overlays obsolete.
 
 ## Tutorial
 
-We will work through an example where the input to the system is a FHIR bundle 
-containing patient information and immunization records, and the output is a
-document that will be used as claims for VC generation. Suppose the target 
-schema is:
+We will work through an example where the input to the system is a
+FHIR bundle containing patient information and immunization records,
+and the output is a document that will be used as claims for VC
+generation. Suppose the target schema is:
 
 ```
 {
@@ -111,8 +111,8 @@ record (edited):
 }
 ```
 
-The projection overlay specifies a field-by-field mapping to construct the target
-data object
+The projection overlay specifies a field-by-field mapping to construct
+the target data object
 
 ```
 sourceSchema: <link to FHIR schema>
