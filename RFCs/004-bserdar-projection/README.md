@@ -17,8 +17,12 @@ the target.
 The need for projection overlay arose in the context of generating a
 vaccination certificate from FHIR messages. The projection overlay can
 specify how to build most, if not all of the fields necessary to build
-such a certificate that later can be signed to produce a
-VC. Projection overlay is also needed in data exchange use-cases
+such a certificate that later can be signed to produce a VC. By
+publishing a set of projection overlays from different source schemas
+to a target schema, it becomes possible to formally prescribe how to
+translate different formats used in the field to the required input.
+
+Projection overlay is also needed in data exchange use-cases
 where the input data schema is different from the exchange data
 schema, which can also be different from the storage schema. 
 
@@ -34,10 +38,48 @@ overlay would make the subset and mapping overlays obsolete.
 
 ## Tutorial
 
-We will work through an example where the input to the system is a
-FHIR bundle containing patient information and immunization records,
-and the output is a document that will be used as claims for VC
-generation. Suppose the target schema is:
+A simple projection overlay simply selects attributes from the source and
+projects them into the target:
+
+```
+projection: {
+  "_target_id": "_source_id",
+  "_target_id": "_source_id..."
+  ...
+}
+
+```
+
+If the target object is an array, of values, the source object should
+also select an array of values. This RFC does not handle creating an
+array of objects at this point.
+
+It should be possible to use a richer selection method instead of
+attribute ids. For example, processing JSON messages (FHIR, etc.) may
+require selecting certain parts of the input based on criteria. To
+support such cases, a `dialect` attribute can be used:
+
+``` 
+"dialect": "FHIRPath",
+"projection" : {
+  "_target_id": <fhirPath>,
+  "_target_id": <fhirPath>,
+  ...
+}
+```
+
+Possible dialects are 
+  
+  * JSON Pointer: https://tools.ietf.org/html/rfc6901
+  * XPath (for XML documents): https://www.w3.org/TR/xpath/
+  * JSON Path (XPath for json): https://goessner.net/articles/JsonPath/
+  * FHIRPath: http://hl7.org/fhirpath/N1/
+
+
+
+Suppose the target schema is a vaccination certificate of the form
+given below, and the purpose is to build this certificate from a FHIR
+bundle obtained from an EHR.
 
 ```
 {
@@ -137,79 +179,43 @@ The projection overlay specifies a field-by-field mapping to construct
 the target data object
 
 ```
-sourceSchema: <link to FHIR schema>
+sourceSchema: <link to FHIR Bundle schema>
 targetSchema: <link to VC schema>
 dialect: jsonpath
-
-object: {
-  scope: {
-     patient: /entry/[?(@.resource.resourceType='Patient')]
-     immunization: /entry/[?(@.resource.resourceType='Immunization' and @.resource.vaccineCode.coding.code='<vaccinde code>')]
-  },
-  properties: {
-     recip_id_id : {
-          scope: patient
-          source: /id
-     },
-     recip_first_name_id: {
-         scope: patient
-         source: /name[0]/given[0]
-     },
-     recip_last_name_id: {
-         scope: patient
-         source: /name[0]/family
-     },
-     recip_dob_id: {
-         scope: patient
-         source: /birthDate
-     },
-     cvx_id: {
-         scope: immunization
-         source: /vaccineCode/coding/[?(@.system='http://hl7.org/fhir/sid/cvx')]/code
-     },
-     ndc_id: {
-         scope: immunization
-         source: /vaccineCode/coding/[?(@.system='http://hl7.org/fhir/sid/ndc)]/code
-     },
+projection: {
+ recip_id : /entry/[?(@.resource.resourceType='Patient')]/id,
+ recip_first_name_id: /entry/[?(@.resource.resourceType='Patient')]/name[0]/given[0]
+ recip_last_name_id: /entry/[?(@.resource.resourceType='Patient')]/name[0]/family
+ recip_dob_id: /entry/[?(@.resource.resourceType='Patient')]/birthDate
+ vax_route_id: /entry/[?(@.resource.resourceType='Immunization' and @.resource.vaccineCode.coding.code='<vaccinde code>')]/route/coding[?(@.system="http://terminology.hl7.org/CodeSystem/v3-RouteOfAdministration")]/display
+ cvx_id: /entry/[?(@.resource.resourceType='Immunization' and @.resource.vaccineCode.coding.code='<vaccinde code>')]/vaccineCode/coding/[?(@.system='http://hl7.org/fhir/sid/cvx')]/code
+ ndc_id: /entry/[?(@.resource.resourceType='Immunization' and @.resource.vaccineCode.coding.code='<vaccinde code>')]/vaccineCode/coding/[?(@.system='http://hl7.org/fhir/sid/ndc)]/code
      ...
-  }
 }
 ```
 
-The `dialect' specifies method that selects the fields of the source
-object.  If unspecified, attribute keys of the source object can be
-directly selected to produce the target object, similar to the
-existing subset overlay. Based on the source message type, the dialect
-can be XPath (for XML messages), FHIRPath (for FHIR objects), JSONPath
-(XPath extended to JSON objects), etc.
+The output would be:
 
-The projection overlay follows the structure of the target schema. For
-each attribute of the target schema, the overlay defines an expression
-that will be evaluated on the source data object. The `scope` object
-selects relevant elements of the source:
-
-```
-scope: {
-     patient: /entry/[?(@.resource.resourceType='Patient')]
-     immunization: /entry/[?(@.resource.resourceType='Immunization' and @.resource.vaccineCode.coding.code='<vaccinde code>')]
+``` 
+{
+  "recip_id": "83a77de9-dba0-4b41-be47-50e26e89d849",
+  "recip_first_name_id": "Benito349",
+  "recip_last_name_id": "Reilly95",
+  "recip_dob_id": "1946-12-03",
+  "vax_route_id": "Injection, intramuscular",
+  "cvx_id": null,
+  "ndc_id": null
+  ...
 }
 ```
 
-The JSONPath for the `patient` selects the entry with
-`resourceType=Patient`. The JSONPath for the `immunization` select the entry with `resourceType=Immunization`, containing the required vaccine code.
+The output of the projection overlay contains all the attributes that
+can be populated from the source. The last two fields are null,
+because the input document does not contain that information. Other
+processing such as user entry may be required to fill the missing
+information. However if the input contains all the necessary data, the
+output can be used without further processing. 
 
-The target attributes are populated by optionally selecting a scope,
-and then selecting an element of that scope. For instance:
-
-```
-     ndc_id: {
-         scope: immunization
-         source: /vaccineCode/coding/[?(@.system='http://hl7.org/fhir/sid/ndc)]/code
-     }
-```
-
-The above rule populates the `ndc` field by selecting the `code` from
-the immunization record coding fields that has a code in `NDC` system.
 
 
 Explain the proposal as if it were already implemented and you were
