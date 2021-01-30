@@ -17,6 +17,13 @@ This RFC does three things:
 
 ## Motivation
 
+The extensions proposed in this RFC were required to decompose the
+FHIR schema into OCA layers. It is not feasible to flatten the FHIR
+specification to enable OCA support, however by the addition of these
+features, it becomes possible to generate OCA-compliant base schemas
+and overlays, which then enables overlay-based processing of FHIR
+messages.
+
 Existing OCA specification uses normalized attribute names for all
 attributes of the base schema and overlays. This requires that all
 normalized attribute names must be predefined and registered. This
