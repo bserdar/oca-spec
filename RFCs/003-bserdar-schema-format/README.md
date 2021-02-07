@@ -9,232 +9,321 @@
 
 This RFC does three things:
 
-  * It limits the usage of normalized attribute names to the attributes of the
-    schema instance,
-  * It extends the base schema structure to deal with nested data objects, and
+  * It provides a JSON-LD context and structure for base schema,
+  * It extends the base schema structure to deal with nested data
+    objects, and
   * It adds an optional selectorDialect attribute to overlays that
-    select the attributes of the base schema using JSONPath, JSON Pointer, XPath, etc.
+    select the attributes of the base schema using JSONPath, JSON
+    Pointer, XPath, etc.
 
 ## Motivation
 
-The extensions proposed in this RFC were required to decompose the
-FHIR schema into OCA layers. It is not feasible to flatten the FHIR
-specification to enable OCA support, however by the addition of these
-features, it becomes possible to generate OCA-compliant base schemas
-and overlays, which then enables overlay-based processing of FHIR
-messages.
+The purpose of this RFC is to extend OCA to handle privacy flagging
+and annotation of data that is not necessarily flat. Such data
+structures are common for data exchange scenarios, in particular, FHIR
+for health data exchange. FHIR is particularly challenging because of
+its deeply nested and cyclic structure. With these extensions,
+creating base schemas and overlays for FHIR-like standard schemas is
+possible.
 
 Existing OCA specification uses normalized attribute names for all
-attributes of the base schema and overlays. This requires that all
-normalized attribute names must be predefined and registered. This
+attributes of the base schema and overlays. Two problems with this
+approach are: 1) A base schema is not a JSON-LD document, and 2) all
+normalized attribute names must be predefined and registered.  This
 approach restricts schema/overlay extensions, and custom overlay types
 that can be used in cases other than data capture (for instance,
 privacy classification of data, or ETL-like processing of existing
-message types such as FHIR). This RFC recommends using the normalized
-attribute names only for the attributes of the data object being
-defined by the schema.
-
-Existing OCA specification has flat base schemas. This does not
-support nested objects such as JSON. This RFC adds direct support for
-nested objects. 
+message types such as FHIR). This RFC defines a JSON-LD context and a
+JSON schema for base schemas. Using these two, it is possible to
+validate a base schema as a JSON document, and expand and interpret it
+as a JSON-LD document.
 
 Currently overlays specify metadata or processing rules using
 normalized attribute names. To support overlay-based processing of
-nested data (such as FHIR objects), selecting attributes by name is
-not sufficient. This RFC suggests using other established ways of 
-selecting attributes, such as JONPath, XPath, FHIRPath, etc.
+nested data (such as FHIR objects), selecting attributes of the base
+schema by name (key) is not sufficient. This RFC suggests supporting
+other established ways of selecting attributes, such as JONPath,
+XPath, FHIRPath, etc.
 
 ## Tutorial
 
 ### Base Schema
 
-The suggested base-schema format is as follows:
+The existing base schema looks like this:
 
 ```
 {
-  "@context": <url>,
-  "id" : <schema id>,
-  "classification": "",
-  "issuedBy": "",
-  "issuerRole": "",
-  "purpose": "",
-  "objectType": "",
-  "attributes": {
-    "normalized_id_value": { 
-      "type": "bytes"
-    },
-    "normalized_id_object": {
-      "type": "object",
-      "attributes: {
-        ...
-      }
-    },
-    "normalized_id_array_of_values": {
-      "type": "array",
-      "items": {
-        "type": "bytes" 
-      }
-    },
-    "normalized_id_array_of_objects": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "attributes": {
-          ...
-        }
-      }
-    },
-    "normalized_id_reference": {
-      "type": "reference",
-      "ref": <schema id>
-    },
-    "normalized_id_allof": {
-      "allOf": [
-         {
-           "type": "reference",
-           "ref": <schema id>
-         },
-         {
-            "type": "object",
-            "attributes": {...}
-         },
-         ...
-       ]
-     },
-    "normalized_id_oneof": {
-      "oneOf": [
-         {
-           "type": "reference",
-           "ref": <schema id>
-         },
-         {
-            "type": "object",
-            "attributes": {...}
-         },
-         ...
-       ]
-     }
-  },
-  "attributeFlagging": [ "normalized_id",...]
-}
-  
-```
-
-The schema header is the same as the existing OCA specification with
-the difference that it uses English keys instead of normalized
-names. Because of this, additional information (such as metadata about
-the schema base) can be included without a need to register these keys
-with a central registry, or defining them in an index overlay.
-
-`attributes` is a JSON object instead of a JSON array. 
-
-Existing OCA base schema:
-```
-"_attributes_id": [
-  "_id1",
-  "_id2",
-  ...
-]
-```
-
-Proposed OCA base schema:
-```
-"attributes": {
-  "_id1": { 
-    "type": "bytes"
-  },
-  "_id2": {
-    "type": "bytes"
-  },
-  ...
-}
-```
-
-The `type: bytes` simply marks the attribute as a sequence of bytes
-that should be interpreted based on the encoding and type information
-provided in other overlays.
-
-The proposed structure also supports defining nested objects, arrays,
-references to other schemas, combinations of entities (using `allOf`)
-and polymorphism (using `oneOf`). These features match their JSON 
-equivalents.
-
-#### Nested Objects
-
-A nested object is defined by listing its attributes:
-
-```
-"_id": {
-  "type": "object",
-  "attributes": {
-    "normalized_id": <type defn>,
+  "@context": "https://oca.tech/v1",
+  "_100": "spec/schema_base/1.0",
+  "_106": "GICS:35202010",
+  "_107": "did:example:ebfeb1f712ebc6f1c276e12ec21",
+  "_200": [
+    "efxnizr39ifc4",
+    "nfijh9i38ceSa",
+    "Mceo097d72bi1",
     ...
-  }
-}
-```
-
-#### Arrays
-
-An array is defined by specifying its item type:
-
-```
-{
-  "type": "array",
-  "items": {
-    <type defn> 
-  }
-}
-```
-
-Above, the `type defn` can be a value (`bytes)`, object, array, reference, etc.
-
-#### References
-
-A reference defines a reference to another base schema:
-
-```
-{
-  "type": "reference",
-  "ref": <schema id>
-}
-```
-
-#### Composition
-
-An object can extend other objects using composition:
-
-```
-{
-  "allOf": [
-     <type defn>.
-     <type defn>,
+  ],
+  "_201": [
+    "nfijh9i38ceSa",
      ...
   ]
 }
 ```
-
-The resulting object contains the attributes of all its components.
-
-#### Polymorphism
-
-An object can be one of the given objects:
+This base schema can be written using the proposed format as follows:
 
 ```
 {
-  "oneOf": [
-     <type defn>,
-     <type defn>
+  "@context": "http://schemas.cloudprivacylabs.com/BaseSchema",
+  "@id": "http://someorg/someEntitySchema",
+  "classification":"GICS:35202010",
+  "issuedBy":"did:example:ebfeb1f712ebc6f1c276e12ec2",
+  "issuerRole": "...",
+  "purpose": "...",
+  "attributes": [
+    {
+      "key": "efxnizr39ifc4"
+    },
+    {
+      "key": "nfijh9i38ceSa",
+      "flag": "https://someOntology/PII"
+    },
+    ...
+  ],
+  
+}
+
+```
+
+The proposed base schema is a proper JSON-LD document that can be
+expanded and processed using existing JSON-LD tools. It can refer to
+other base schemas, and optional extensions can be added using
+additional contexts. Here are the differences:
+
+### @context
+
+The @context identifies a JSON-LD context that defines the nested
+structure of attributes. The context is defined as:
+
+```
+{
+    "@context": {
+        "classification": {
+            "@id": "http://schemas.cloudprivacylabs.com/BaseSchema/classification"
+        },
+        "issuedBy": {
+            "@id": "http://schemas.cloudprivacylabs.com/BaseSchema/issuedBy"
+        },
+        "issuerRole": {
+            "@id": "http://schemas.cloudprivacylabs.com/BaseSchema/issuerRole"
+        },
+        "purpose": {
+            "@id": "http://schemas.cloudprivacylabs.com/BaseSchema/purpose"
+        },
+        "attributes": {
+            "@id":"http://schemas.cloudprivacylabs.com/BaseSchema/attributes",
+            "@context": {
+                "key": "http://schemas.cloudprivacylabs.com/BaseSchema/attributeKey",
+                "flag": "@id",
+                "reference": "@id",
+                "items":{
+                    "@id": "http://schemas.cloudprivacylabs.com/BaseSchema/items"
+                },
+                "allOf": {
+                    "@id": "http://schemas.cloudprivacylabs.com/BaseSchema/allOf",
+                    "@container": "@list"
+                },
+                "oneOf": {
+                    "@id": "http://schemas.cloudprivacylabs.com/BaseSchema/oneOf",
+                    "@container": "@list"
+                }
+            }
+        }
+    }
+}
+```
+
+### @id
+
+This defines the id for the base schema. Other base schema can use
+this @id to refer to this base schema.
+
+### classification, issuedBy, issuerRole, purpose
+
+Schema metadata fields.
+
+### attributes
+
+This part defines the attributes of the schema, and optionally flags
+them using additional term references. A simple value is represented as:
+
+```
+{
+  "key": "<key_value>"
+}
+```
+
+The `key_value` is the value assigned to this attribute by the schema
+author. Localized names can be given to this key using an index overlay.
+
+Example:
+
+The following defines a "name" attribute:
+```
+{
+  "key": "name"
+}
+```
+Using an index overlay, a separate value can be assigned to the key "name".
+
+All key values are unique within the `attributes` section they are
+defined. Same key values can be used to refer to different attributes
+in nested fields. That is:
+
+```
+"attributes": [
+  {
+    "key": "name"
+  },
+  {
+    "key": "obj",
+    "attributes": [
+       {
+         "key": "name"
+       }
+    ]
+  }
+]
+```
+
+The above schema defines the following JSON document:
+
+```
+{
+  "name": "...",
+  "obj": {
+    "name": "..."
+  }
+}
+```
+
+The `name` and `obj.name` refer to two different attributes.
+
+An attribute can be flagged:
+
+```
+    {
+      "key": "nfijh9i38ceSa",
+      "flag": "https://someOntology/PII"
+    }
+```
+
+For instance, this can be used to flag PII information based on BIT.
+
+An attribute can be a reference to another base schema:
+
+```
+{
+   "key": "patient",
+   "reference": "http://someSite/Patient"
+}
+```
+
+The above defines the field "patient" to be a "Patient" object, whose
+base schema is given in the `reference` value.
+
+An attribute can be a nested object:
+
+```
+{
+   "key": "nestedObject",
+   "attributes": [
+      {
+        "key": "nestedAttribute"
+      },
+      ...
+   ]
+}
+```
+
+An attribute can be an array whose items can be described in the base
+schema:
+
+```
+{
+  "key": "valueArray",
+  "items": {}
+}
+```
+
+Instance:
+
+```
+"valueArray": [ "value1", "value2", ... ]
+```
+
+```
+{
+  "key": "objectArray",
+  "items": {
+     "attributes": [
+        {
+          "key": "key1"
+        }
+     ]
+  }
+}
+```
+
+Instance:
+
+```
+"objectArray": [ 
+  { "key1": "value1" },
+  { "key2": "value2" }
+]
+```
+
+An attribute can be the composition of multiple objects:
+
+```
+{
+  "key": "p1",
+  "allOf": [
+    {
+      "reference": "http://someObject"
+    },
+    {
+      "attributes": [
+        {
+           "key": "attr"
+        }
+      ]
+    }
   ]
 }
 ```
 
-For example, a FHIR bundle contains an array of entries, where each
-entry can be a Patient, Encounter, etc.
+The above construct creates the `p1` attribute by using all
+attributes of `http://someobject` and `attr`.
 
-A JSON schema representation of this proposal is at: 
+An attribute can be a polymorphic value:
 
-https://github.com/bserdar/ocaschemas/blob/main/json/base.schema.json
+```
+{
+   "key": "p2",
+   "oneOf": [
+     {
+      "reference": "http://obj1"
+     },
+     {
+      "reference": "http"//obj2"
+     }
+    ]
+}
+```
 
+This describes the `p2` attribute as either `http://obj1` or
+`http://obj2`.
 
 ### Overlays
 
@@ -242,55 +331,18 @@ The suggested overlay format is as follows:
 
 ```
 {
-  "@context": <url>,
-  "overlayType": <type>,
+  "@context": [ <base_overlay_context>, <specific_overlay_context> ],
+  "@id": "http://overlayId",
   <overlay specific attributes>
   selectorDialect: <dialect>
   <overlay spec>
 ```
 
-where `overlay spec` is:
-
-```
-{ 
-   <selector> : <rule>
-   ...
-}
-```
-
-The `selectorDialect` is an optional property specifying how the base
-schema attributes are selected. If it is not specified, the base
-schema attributes are selected using their normalized ids. For example:
-
-```
-{
-  "@context": <url>
-  "overlayType": "encoding",
-  "attributes": {
-    "_id1": "utf8",
-    "_id2": "utf8"
-    ...
-   }
-}
-```
-
-The `selectorDialect` can specify another method to select
-attributes. The following example uses an XPath to select fields of
-the base schema and applies overlay specific rules:
-
-```
-{
-  "@context": <url>
-  "overlayType": "projection",
-  "selectorDialect": "xpath",
-  "attributes": {
-     "/_id1/_id2": <rule1>,
-     "//_id3": <rule2>,
-     ...
-  }
-}
-```
-
+The `@context` specifies what type of overlay is being defined. The
+`base_overlay_context` defines the terms common to overlays. The
+`specific_overlay_context` defines the terms used in this
+overlay. This also allows creating overlays that perform composite
+functions.
 
 
 ## Reference
