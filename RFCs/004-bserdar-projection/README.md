@@ -122,7 +122,6 @@ bundle obtained from an EHR.
 }
 ```
 
-
 Using the following sample input:
 
 ```
@@ -377,8 +376,9 @@ The output would be:
 }
 ```
 
+A prototype implementation for this transformation is available here: 
 
-
+https://github.com/bserdar/oca-projection-prototype
 
 
 Explain the proposal as if it were already implemented and you were
