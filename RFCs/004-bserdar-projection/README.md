@@ -14,23 +14,20 @@ the target.
 
 ## Motivation
 
+The purpose of the projection overlay is to provide a method for a
+governing entity to publish a prescriptive method for constructing
+instances of a base schema from source data. The governing entity can
+publish multiple projection overlays to support different variations
+of the input (for instance, different FHIR profiles).
+
 The need for projection overlay arose in the context of generating a
-vaccination certificate from FHIR messages. The projection overlay can
-specify how to build most, if not all of the fields necessary to build
-such a certificate that later can be signed to produce a VC. By
-publishing a set of projection overlays from different source schemas
-to a target schema, it becomes possible to formally prescribe how to
-translate different formats used in the field to the required input.
+vaccination certificate from FHIR resources. The projection overlay
+can prescribe how to build most, if not all of the fields necessary to
+produce a VC from a FHIR input.
 
-Projection overlay is also needed in data exchange use-cases
-where the input data schema is different from the exchange data
-schema, which can also be different from the storage schema. 
-
-The projection overlay defines a semantic association between the
-fields of two schemas as well as a method for unidirectional
-transformations.  It may be possible that some use cases may require
-additional application-specific processing to implement a usable
-mapping. 
+Projection overlay can also be used in data exchange use-cases where
+the input data schema is different from the exchange data schema, or
+in ETL use cases to perform data transformations.
 
 The current OCA specification already contains a subset overlay and a
 mapping overlay that work similarly. The addition of projection
@@ -38,43 +35,71 @@ overlay would make the subset and mapping overlays obsolete.
 
 ## Tutorial
 
-A simple projection overlay simply selects attributes from the source and
-projects them into the target:
+
+A projection overlay selects attributes from the source and projects
+them into the target:
 
 ```
-projection: {
-  "_target_id": "_source_id",
-  "_target_id": "_source_id..."
+{
+  "@context": [
+    "http://schemas.cloudprivacylabs.com/BaseSchema",
+    "http://schemas.cloudprivacylabs.com/Overlay",
+    "http://schemas.cloudprivacylabs.com/ProjectionOverlay"],
+  "sourceSchema": "http://sourceSchema",
+  "targetSchema": "http://targetSchema",
+  "attributes": [
+  {
+     "sourcePath": "source_id",
+     "key": "target_id"
+  },
+  {
+     "const": <value>,
+     "key": "target_id"
+  },
   ...
+  ]
 }
 
 ```
 
-If the target object is an array, of values, the source object should
-also select an array of values. This RFC does not handle creating an
-array of objects at this point.
+The `attributes` (from `BaseSchema`) specifies a nested attribute tree
+that matches the target schema, so this structure desribes how to build
+each attribute of the target schema. The term `sourcePath` selects an
+attribute from the source schema using dot-notation. The term `const`
+inserts a constant value to the target.
 
-It should be possible to use a richer selection method instead of
-attribute ids. For example, processing JSON messages (FHIR, etc.) may
-require selecting certain parts of the input based on criteria. To
-support such cases, a `dialect` attribute can be used:
+It is possible to specify other attribute selection methods such as
+JSONPath, XPath, etc. An overlay processor capable of processing such
+methods should publish a context . For
+example, an overlay processor with JSONPath capabilities can support
+an overlay:
 
-``` 
-"dialect": "FHIRPath",
-"projection" : {
-  "_target_id": <fhirPath>,
-  "_target_id": <fhirPath>,
+```
+{
+  "@context": [
+    "http://schemas.cloudprivacylabs.com/BaseSchema",
+    "http://schemas.cloudprivacylabs.com/Overlay",
+    "http://schemas.cloudprivacylabs.com/ProjectionOverlay",
+    "http://myContext/JSONPathSupport"],
+  "sourceSchema": "http://sourceSchema",
+  "targetSchema": "http://targetSchema",
+  "attributes": [
+  {
+     "jsonPath": <jsonpath expression>,
+     "key": "target_id"
+  },
   ...
+  ]
 }
+
 ```
 
-Possible dialects are 
-  
+Possible options are:
+
   * JSON Pointer: https://tools.ietf.org/html/rfc6901
   * XPath (for XML documents): https://www.w3.org/TR/xpath/
   * JSON Path (XPath for json): https://goessner.net/articles/JsonPath/
   * FHIRPath: http://hl7.org/fhirpath/N1/
-
 
 
 Suppose the target schema is a vaccination certificate of the form
@@ -102,94 +127,224 @@ Using the following sample input:
 
 ```
 {
+    "resourceType": "Bundle",
+    "id": "DHIR",
+    "meta": {
+        "versionId": "1.1.5",
+        "lastUpdated": "2020-12-07"
+    },
+    "type": "collection",
     "entry": [
         {
-            "resource": {
-                "resourceType": "Patient",
-                "birthDate": "1946-12-03",
-                "gender": "male",
-                "id": "83a77de9-dba0-4b41-be47-50e26e89d849",
-                "name": [
+            "resourceType": "Immunization",
+            "id": "Immunization01",
+            "meta":{
+                "lastUpdated":"2017-07-25T15:43:54.271-05:00"
+            },
+            "extension": [
+                {
+                    "url": "[base-structure]/ca-on-immunizations-extension-public-health-unit",
+                    "valueString": "Toronto PHU"
+                }
+            ],
+            "status": "completed",
+            "vaccineCode": {
+                "coding": [
                     {
-                        "family": "Reilly95",
-                        "given": [
-                            "Benito349"
-                        ],
-                        "prefix": [
-                            "Mr."
-                        ],
-                        "use": "official"
+                        "system": "http://snomed.info/sct",
+                        "code": "61153008",
+                        "display": "MMR"
+                    },
+                    {
+                        "system": "http://snomed.info/sct",
+                        "code": "7171000087106",
+                        "display": "MMR Priorix GSK"
                     }
                 ]
-            }
+            },
+            "patient": {
+                "reference": "Patient/Patient1234"
+            },
+            "occurrenceDateTime": "2016-02-14T10:22:00-05:00",
+            "primarySource": true,
+            "lotNumber": "Some Lot",
+            "performer": [
+                {
+                    "function": {
+                        "coding": [
+                            {
+                                "system": "http://terminology.hl7.org/CodeSystem/v2-0443",
+                                "code": "AP",
+                                "display": "Administering Provider"
+                            }
+                        ]
+                    },
+                    "actor": {
+                        "reference": "Practitioner/Practitioner1234"
+                    }
+                }]
         },
         {
-           "resource": {
-               "status": "completed",
-               "vaccineCode": {
-               "coding": [
-                  {
-                   "system": ""
-                   "code": "
-                  }
-              ],
-           },
-          "occurrenceDateTime": "2013-01-10",
-          "primarySource": true,
-          "location": {
-             "reference": "Location/1"
-           },
-          "manufacturer": {
-             "reference": "Organization/hl7"
-          },
-          "lotNumber": "AAJN11K",
-          "expirationDate": "2015-02-15",
-          "site": {
-            "coding": [
-               {
-                "system": "http://terminology.hl7.org/CodeSystem/v3-ActSite",
-                "code": "LA",
-                "display": "left arm"
-               }
-            ]
-         },
-        "route": {
-           "coding": [
-              {
-               "system": "http://terminology.hl7.org/CodeSystem/v3-RouteOfAdministration",
-               "code": "IM",
-               "display": "Injection, intramuscular"
-             }
-           ]
+            "resourceType": "Patient",
+            "id": "Patient1234",
+            "identifier": [
+                {
+                    "system": "[id-system-local-base]/ca-on-panorama-immunization-id",
+                    "value": "95ZWBKWTC5"
+                },
+                {
+                    "system": "[id-system-global-base]/ca-on-patient-hcn",
+                    "value": "9393881587"
+                }
+            ],
+            "name": [
+                {
+                    "family": "Doe",
+                    "given": [
+                        "John",
+                        "W."
+                    ]
+                }
+            ],
+            "gender": "male",
+            "birthDate": "2012-02-14"
         },
-       "doseQuantity": {
-            "value": 5,
-            "system": "http://unitsofmeasure.org",
-            "code": "mg"
-       },
-        ...
-      }
-   ],
-    "resourceType": "Bundle",
-    "type": "collection"
+        {
+            "resourceType": "Practitioner",
+            "id": "Practitioner1234",
+            "name": [
+                {
+                    "family": "Nurse",
+                    "given": [
+                        "Best"
+                    ]
+                }
+            ],
+            "qualification": [
+                {
+                    "code": {
+                        "coding": [
+                            {
+                                "system": "[code-system-local-base]/ca-on-immunizations-practitionerdesignation",
+                                "code": "RN",
+                                "display": "Registered Nurse"
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "resourceType": "ImmunizationRecommendation",
+            "id": "ImmunizationRecommendation01",
+            "patient": {
+                "reference": "Patient/Patient1234"
+            },
+            "date": "2016-07-28T11:04:15.817-05:00",
+            "recommendation": [
+                {
+                    "targetDisease": {
+                        "coding": [
+                            {
+                                "system": "http://snomed.info/sct",
+                                "code": "36989005",
+                                "display": "Mumps"
+                            }
+                        ]
+                    },
+                    "forecastStatus": {
+                        "coding": [
+                            {
+                                "system": " http://snomed.info/sct",
+                                "code": "8191000087109",
+                                "display": "Overdue"
+                            }
+                        ]
+                    },
+                    "dateCriterion": [
+                        {
+                            "code": {
+                                "coding": [
+                                    {
+                                        "system": " http://loinc.org ",
+                                        "code": "30980-7",
+                                        "display": "Date vaccine due"
+                                    }
+                                ]
+                            },
+                            "value": "2016-06-01"
+                        }
+                    ]
+                },
+                {
+                    "targetDisease": {
+                        "coding": [
+                            {
+                                "system": "http://snomed.info/sct",
+                                "code": "14189004",
+                                "display": "Measles"
+                            }
+                        ]
+                    },
+                    "forecastStatus": {
+                        "coding": [
+                            {
+                                "system": "http://snomed.info/sct",
+                                "code": "8191000087109",
+                                "display": "Overdue"
+                            }
+                        ]
+                    },
+                    "dateCriterion": [
+                        {
+                            "code": {
+                                "coding": [
+                                    {
+                                        "system": " http://loinc.org ",
+                                        "code": "30980-7",
+                                        "display": "Date vaccine due"
+                                    }
+                                ]
+                            },
+                            "value": "2016-06-01"
+                        }
+                    ]
+                }
+            ]
+        } 
+    ]
 }
+
 ```
 
 The projection overlay specifies a field-by-field mapping to construct
 the target data object
 
 ```
-sourceSchema: <link to FHIR Bundle schema>
-targetSchema: <link to VC schema>
-dialect: jsonpath
-projection: {
- recip_id : /entry/[?(@.resource.resourceType='Patient')]/id,
- recip_first_name_id: /entry/[?(@.resource.resourceType='Patient')]/name[0]/given[0]
- recip_last_name_id: /entry/[?(@.resource.resourceType='Patient')]/name[0]/family
- recip_dob_id: /entry/[?(@.resource.resourceType='Patient')]/birthDate
- vax_route_id: /entry/[?(@.resource.resourceType='Immunization' and @.resource.vaccineCode.coding.code='<vaccinde code>')]/route/coding[?(@.system="http://terminology.hl7.org/CodeSystem/v3-RouteOfAdministration")]/display
- cvx_id: /entry/[?(@.resource.resourceType='Immunization' and @.resource.vaccineCode.coding.code='<vaccinde code>')]/vaccineCode/coding/[?(@.system='http://hl7.org/fhir/sid/cvx')]/code
- ndc_id: /entry/[?(@.resource.resourceType='Immunization' and @.resource.vaccineCode.coding.code='<vaccinde code>')]/vaccineCode/coding/[?(@.system='http://hl7.org/fhir/sid/ndc)]/code
+{
+  "@context": [
+    "http://schemas.cloudprivacylabs.com/BaseSchema",
+    "http://schemas.cloudprivacylabs.com/Overlay",
+    "http://schemas.cloudprivacylabs.com/ProjectionOverlay"],
+  "sourceSchema": "http://fhirSchema",
+  "targetSchema": "http://targetSchema",
+  "attributes": [
+        {
+            "const": "http://projection-test",
+            "key": "@vocab"
+        },
+        {
+            "jsonPath": "$.entry[?(@.resourceType==\"Immunization\")].id",
+            "key": "vax_event_id"
+        },
+        {
+            "jsonPath": "$.entry[?(@.resourceType==\"Patient\")].name[0].given[0]",
+            "key": "recip_first_name"
+        },
+        {
+            "jsonPath": "$.entry[?(@.resourceType==\"Patient\")].name[0].given[1]",
+            "key": "recip_middle_name"
+        },
      ...
 }
 ```
@@ -197,24 +352,32 @@ projection: {
 The output would be:
 
 ``` 
-{
-  "recip_id": "83a77de9-dba0-4b41-be47-50e26e89d849",
-  "recip_first_name_id": "Benito349",
-  "recip_last_name_id": "Reilly95",
-  "recip_dob_id": "1946-12-03",
-  "vax_route_id": "Injection, intramuscular",
-  "cvx_id": null,
-  "ndc_id": null
-  ...
+
+  "@vocab": "http://projection-test",
+  "admin_cvx": [
+    "61153008",
+    "7171000087106"
+  ],
+  "admin_date": "2016-02-14T10:22:00-05:00",
+  "admin_name": [
+    {
+      "family": "Nurse",
+      "given": [
+        "Best"
+      ]
+    }
+  ],
+  "lot_number": "Some Lot",
+  "recip_dob": "2012-02-14",
+  "recip_first_name": "John",
+  "recip_last_name": "Doe",
+  "recip_middle_name": "W.",
+  "recip_sex": "male",
+  "vax_event_id": "Immunization01"
 }
 ```
 
-The output of the projection overlay contains all the attributes that
-can be populated from the source. The last two fields are null,
-because the input document does not contain that information. Other
-processing such as user entry may be required to fill the missing
-information. However if the input contains all the necessary data, the
-output can be used without further processing. 
+
 
 
 
