@@ -335,10 +335,13 @@ The suggested overlay format is as follows:
   <attributes specification>
 ```
 
-The overlays use multiple contexts. Terms used to define the overlay
-selects what type of metadata or processing the overlay defines. As an
-example, the following index overlay uses `attributes` to define name for
-base schema keys following the same structure are the base schema:
+This format uses JSON-LD contexts and terminology to refer to
+capabilities, algorithms, metadata, etc. Because of this, there is no
+need to include an overlay type. 
+
+As an example, the following index overlay uses `attributes` to define
+name for base schema keys following the same structure are the base
+schema:
 
 ``` 
 {
@@ -351,13 +354,13 @@ base schema keys following the same structure are the base schema:
   "attributes": [
     {
       "key": "id_key1",
-      "name": "name_Key1"
+      "attributeName": "name_Key1"
     },
     {
       "attributes": [
         {
           "key": "id_key2",
-          "name": "name_Key2"
+          "attributeName": "name_Key2"
         }
       ]
     }
@@ -366,7 +369,7 @@ base schema keys following the same structure are the base schema:
 ```
 
 The `attributes` term comes from the `BaseSchema` context, and thus
-defines a nested structure matching the base schema. The `name` term
+defines a nested structure matching the base schema. The `attributeName` term
 comes from the `IndexOverlay` context and defines the name for the key.
 
 The same index overlay can be defined as follows:
@@ -378,21 +381,21 @@ The same index overlay can be defined as follows:
     "http://schemas.cloudprivacylabs.com/IndexOverlay"
   ],
   "base": "<base schema id>",
-  "selectors": [
+  "paths": [
     {
       "key": "id_key1",
-      "name": "name_Key1"
+      "attributeName": "name_Key1"
     },
     {
       "key": "id_key1.id_key2",
-      "name": "name_Key2"
+      "attributeName": "name_Key2"
     }
   ]
 }
 
 ```
 
-This overlay uses `selectors` from the `Overlay` context that uses
+This overlay uses `paths` from the `Overlay` context that uses
 dot-notation to address base schema attributes.
 
 The use of multiple contexts allow defining composite overlays. For
