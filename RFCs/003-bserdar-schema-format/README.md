@@ -12,9 +12,7 @@ This RFC does three things:
   * It provides a JSON-LD context and structure for base schema,
   * It extends the base schema structure to deal with nested data
     objects, and
-  * It adds an optional selectorDialect attribute to overlays that
-    select the attributes of the base schema using JSONPath, JSON
-    Pointer, XPath, etc.
+  * It specifies a common high-level JSON-LD structure for overlays.
 
 ## Motivation
 
@@ -38,12 +36,12 @@ JSON schema for base schemas. Using these two, it is possible to
 validate a base schema as a JSON document, and expand and interpret it
 as a JSON-LD document.
 
-Currently overlays specify metadata or processing rules using
+Existing OCA overlays specify metadata or processing rules using
 normalized attribute names. To support overlay-based processing of
-nested data (such as FHIR objects), selecting attributes of the base
-schema by name (key) is not sufficient. This RFC suggests supporting
-other established ways of selecting attributes, such as JONPath,
-XPath, FHIRPath, etc.
+nested data (such as FHIR objects), this RFC suggests supporting other
+established ways of selecting attributes, such as JONPath, XPath,
+FHIRPath, by using JSON-LD documents and multiple contexts for
+overlays.
 
 ## Tutorial
 
@@ -331,18 +329,76 @@ The suggested overlay format is as follows:
 
 ```
 {
-  "@context": [ <base_overlay_context>, <specific_overlay_context> ],
+  "@context": [ <base_schema_context>, <base_overlay_context>, <specific_overlay_context> ],
   "@id": "http://overlayId",
   <overlay specific attributes>
-  selectorDialect: <dialect>
-  <overlay spec>
+  <attributes specification>
 ```
 
-The `@context` specifies what type of overlay is being defined. The
-`base_overlay_context` defines the terms common to overlays. The
-`specific_overlay_context` defines the terms used in this
-overlay. This also allows creating overlays that perform composite
-functions.
+The overlays use multiple contexts. Terms used to define the overlay
+selects what type of metadata or processing the overlay defines. As an
+example, the following index overlay uses `attributes` to define name for
+base schema keys following the same structure are the base schema:
+
+``` 
+{
+  "@context": [
+    "http://schemas.cloudprivacylabs.com/BaseSchema",
+    "http://schemas.cloudprivacylabs.com/Overlay",
+    "http://schemas.cloudprivacylabs.com/IndexOverlay"
+  ],
+  "base": "<base schema id>,
+  "attributes": [
+    {
+      "key": "id_key1",
+      "name": "name_Key1"
+    },
+    {
+      "attributes": [
+        {
+          "key": "id_key2",
+          "name": "name_Key2"
+        }
+      ]
+    }
+  ]
+}
+```
+
+The `attributes` term comes from the `BaseSchema` context, and thus
+defines a nested structure matching the base schema. The `name` term
+comes from the `IndexOverlay` context and defines the name for the key.
+
+The same index overlay can be defined as follows:
+
+```
+{
+  "@context": [
+    "http://schemas.cloudprivacylabs.com/Overlay",
+    "http://schemas.cloudprivacylabs.com/IndexOverlay"
+  ],
+  "base": "<base schema id>",
+  "selectors": [
+    {
+      "key": "id_key1",
+      "name": "name_Key1"
+    },
+    {
+      "key": "id_key1.id_key2",
+      "name": "name_Key2"
+    }
+  ]
+}
+
+```
+
+This overlay uses `selectors` from the `Overlay` context that uses
+dot-notation to address base schema attributes.
+
+The use of multiple contexts allow defining composite overlays. For
+example, using the `IndexOverlay` and `EncodingOverlay` together a
+single overlay can specify both the names and encodings for the
+attributes of the base schema.
 
 
 ## Reference
