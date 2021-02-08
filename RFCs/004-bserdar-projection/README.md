@@ -1,4 +1,4 @@
-# Projection Overlays
+# Projection Overlay
 - Authors: Burak Serdar (bserdar@computer.org)
 - Status: PROPOSED
 - Status Note: (explanation of current status)
