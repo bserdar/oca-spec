@@ -1,4 +1,4 @@
-# Base Schema and Overlay Format
+# Schema Base and Overlay Format
 - Authors: Burak Serdar (bserdar@computer.org)
 - Status: [PROPOSED]
 - Status Note: (explanation of current status)
@@ -9,8 +9,8 @@
 
 This RFC does three things:
 
-  * It provides a JSON-LD context and structure for base schema,
-  * It extends the base schema structure to deal with nested data
+  * It provides a JSON-LD context and structure for schema base,
+  * It extends the schema base structure to deal with nested data
     objects, and
   * It specifies a common high-level JSON-LD structure for overlays.
 
@@ -21,19 +21,19 @@ and annotation of data that is not necessarily flat. Such data
 structures are common for data exchange scenarios, in particular, FHIR
 for health data exchange. FHIR is particularly challenging because of
 its deeply nested and cyclic structure. With these extensions,
-creating base schemas and overlays for FHIR-like standard schemas is
+creating schema bases and overlays for FHIR-like standard schemas is
 possible.
 
 Existing OCA specification uses normalized attribute names for all
-attributes of the base schema and overlays. Two problems with this
-approach are: 1) A base schema is not a JSON-LD document, and 2) all
+attributes of the schema base and overlays. Two problems with this
+approach are: 1) A schema base is not a JSON-LD document, and 2) all
 normalized attribute names must be predefined and registered.  This
 approach restricts schema/overlay extensions, and custom overlay types
 that can be used in cases other than data capture (for instance,
 privacy classification of data, or ETL-like processing of existing
 message types such as FHIR). This RFC defines a JSON-LD context and a
-JSON schema for base schemas. Using these two, it is possible to
-validate a base schema as a JSON document, and expand and interpret it
+JSON schema for schema bases. Using these two, it is possible to
+validate a schema base as a JSON document, and expand and interpret it
 as a JSON-LD document.
 
 Existing OCA overlays specify metadata or processing rules using
@@ -45,9 +45,9 @@ overlays.
 
 ## Tutorial
 
-### Base Schema
+### Schema Base
 
-The existing base schema looks like this:
+The existing schema base looks like this:
 
 ```
 {
@@ -67,11 +67,11 @@ The existing base schema looks like this:
   ]
 }
 ```
-This base schema can be written using the proposed format as follows:
+This schema base can be written using the proposed format as follows:
 
 ```
 {
-  "@context": "http://schemas.cloudprivacylabs.com/BaseSchema",
+  "@context": "http://schemas.cloudprivacylabs.com/SchemaBase",
   "@id": "http://someorg/someEntitySchema",
   "classification":"GICS:35202010",
   "issuedBy":"did:example:ebfeb1f712ebc6f1c276e12ec2",
@@ -92,9 +92,9 @@ This base schema can be written using the proposed format as follows:
 
 ```
 
-The proposed base schema is a proper JSON-LD document that can be
+The proposed schema base is a proper JSON-LD document that can be
 expanded and processed using existing JSON-LD tools. It can refer to
-other base schemas, and optional extensions can be added using
+other schema bases, and optional extensions can be added using
 additional contexts. Here are the differences:
 
 ### @context
@@ -106,32 +106,32 @@ structure of attributes. The context is defined as:
 {
     "@context": {
         "classification": {
-            "@id": "http://schemas.cloudprivacylabs.com/BaseSchema/classification"
+            "@id": "http://schemas.cloudprivacylabs.com/SchemaBase/classification"
         },
         "issuedBy": {
-            "@id": "http://schemas.cloudprivacylabs.com/BaseSchema/issuedBy"
+            "@id": "http://schemas.cloudprivacylabs.com/SchemaBase/issuedBy"
         },
         "issuerRole": {
-            "@id": "http://schemas.cloudprivacylabs.com/BaseSchema/issuerRole"
+            "@id": "http://schemas.cloudprivacylabs.com/SchemaBase/issuerRole"
         },
         "purpose": {
-            "@id": "http://schemas.cloudprivacylabs.com/BaseSchema/purpose"
+            "@id": "http://schemas.cloudprivacylabs.com/SchemaBase/purpose"
         },
         "attributes": {
-            "@id":"http://schemas.cloudprivacylabs.com/BaseSchema/attributes",
+            "@id":"http://schemas.cloudprivacylabs.com/SchemaBase/attributes",
             "@context": {
-                "key": "http://schemas.cloudprivacylabs.com/BaseSchema/attributeKey",
+                "key": "http://schemas.cloudprivacylabs.com/SchemaBase/attributeKey",
                 "flag": "@id",
                 "reference": "@id",
                 "items":{
-                    "@id": "http://schemas.cloudprivacylabs.com/BaseSchema/items"
+                    "@id": "http://schemas.cloudprivacylabs.com/SchemaBase/items"
                 },
                 "allOf": {
-                    "@id": "http://schemas.cloudprivacylabs.com/BaseSchema/allOf",
+                    "@id": "http://schemas.cloudprivacylabs.com/SchemaBase/allOf",
                     "@container": "@list"
                 },
                 "oneOf": {
-                    "@id": "http://schemas.cloudprivacylabs.com/BaseSchema/oneOf",
+                    "@id": "http://schemas.cloudprivacylabs.com/SchemaBase/oneOf",
                     "@container": "@list"
                 }
             }
@@ -142,8 +142,8 @@ structure of attributes. The context is defined as:
 
 ### @id
 
-This defines the id for the base schema. Other base schema can use
-this @id to refer to this base schema.
+This defines the id for the schema base. Other schema bases can use
+this @id to refer to this schema base.
 
 ### classification, issuedBy, issuerRole, purpose
 
@@ -217,7 +217,7 @@ An attribute can be flagged:
 
 For instance, this can be used to flag PII information based on BIT.
 
-An attribute can be a reference to another base schema:
+An attribute can be a reference to another schema base:
 
 ```
 {
@@ -227,7 +227,7 @@ An attribute can be a reference to another base schema:
 ```
 
 The above defines the field "patient" to be a "Patient" object, whose
-base schema is given in the `reference` value.
+schema base is given in the `reference` value.
 
 An attribute can be a nested object:
 
@@ -243,8 +243,7 @@ An attribute can be a nested object:
 }
 ```
 
-An attribute can be an array whose items can be described in the base
-schema:
+An attribute can be an array whose items can be described in the schema base:
 
 ```
 {
@@ -329,7 +328,7 @@ The suggested overlay format is as follows:
 
 ```
 {
-  "@context": [ <base_schema_context>, <base_overlay_context>, <specific_overlay_context> ],
+  "@context": [ <schema_base_context>, <base_overlay_context>, <specific_overlay_context> ],
   "@id": "http://overlayId",
   <overlay specific attributes>
   <attributes specification>
@@ -340,17 +339,16 @@ capabilities, algorithms, metadata, etc. Because of this, there is no
 need to include an overlay type. 
 
 As an example, the following index overlay uses `attributes` to define
-name for base schema keys following the same structure are the base
-schema:
+name for schema base keys following the same structure are the schema base:
 
 ``` 
 {
   "@context": [
-    "http://schemas.cloudprivacylabs.com/BaseSchema",
+    "http://schemas.cloudprivacylabs.com/SchemaBase",
     "http://schemas.cloudprivacylabs.com/Overlay",
     "http://schemas.cloudprivacylabs.com/IndexOverlay"
   ],
-  "base": "<base schema id>,
+  "base": "<schema base  id>,
   "attributes": [
     {
       "key": "id_key1",
@@ -368,8 +366,8 @@ schema:
 }
 ```
 
-The `attributes` term comes from the `BaseSchema` context, and thus
-defines a nested structure matching the base schema. The `attributeName` term
+The `attributes` term comes from the `SchemaBase` context, and thus
+defines a nested structure matching the schema base. The `attributeName` term
 comes from the `IndexOverlay` context and defines the name for the key.
 
 The same index overlay can be defined as follows:
@@ -380,7 +378,7 @@ The same index overlay can be defined as follows:
     "http://schemas.cloudprivacylabs.com/Overlay",
     "http://schemas.cloudprivacylabs.com/IndexOverlay"
   ],
-  "base": "<base schema id>",
+  "base": "<schema base id>",
   "paths": [
     {
       "key": "id_key1",
@@ -396,12 +394,12 @@ The same index overlay can be defined as follows:
 ```
 
 This overlay uses `paths` from the `Overlay` context that uses
-dot-notation to address base schema attributes.
+dot-notation to address schema base attributes.
 
 The use of multiple contexts allow defining composite overlays. For
 example, using the `IndexOverlay` and `EncodingOverlay` together a
 single overlay can specify both the names and encodings for the
-attributes of the base schema.
+attributes of the schema base.
 
 
 ## Reference
