@@ -39,15 +39,17 @@ The proposed schema base is as follows:
 
 ```
 {
-  "@context": "<baseurl>/layered.jsonld",
+  "@context": "https://layeredschemas.org/layered.jsonld",
   "@type": "SchemaBase",
   "objectType": "someEntity",
-  "attributes": [
-    {
-      "key": "efxnizr39ifc4"
+  "attributes": {
+    "key1": {},
+    "key2": {
+      "attributes": {
+         "key2_1": {}
+      }
     },
-    {
-      "key": "nfijh9i38ceSa",
+    "key3": {
       "flags": ["https://someOntology/PII"]
     },
     ...
@@ -57,10 +59,10 @@ The proposed schema base is as follows:
 
 ```
 
-The proposed schema base is a proper JSON-LD document that can be
-expanded and processed using existing JSON-LD tools. It can refer to
-other schema bases, and optional extensions can be added using
-additional contexts. 
+The proposed schema base is a JSON-LD document that can be expanded
+and processed using existing JSON-LD tools. It can refer to other
+schema bases, and optional extensions can be added using additional
+contexts.
 
 ### @context
 
@@ -73,11 +75,11 @@ semantics and algorithms associated with it.
  
 ```
         "SchemaBase": {
-            "@id": "<base>/SchemaBase",
+            "@id": "https://layeredschemas.org/SchemaBase",
             "@context": {
                 "@version": 1.1,
                 "objectType": {
-                    "@id": "<base>/Schema/objectType",
+                    "@id": "https://layeredschemas.org/Schema/objectType",
                     "@type": "@id"
                 }
             }
@@ -91,65 +93,62 @@ properties of the attributes.
 
 ```
 "attributes": {
-    "@id": "<base>/attributes",
-    "@container": "@list",
+    "@id": "https://layeredschemas.org/attributes",
+    "@container": "@id",
     "@context": {
         "@version": 1.1,
-        "@vocab": "</base>/attribute/",
-        "key": "</base>/attribute/key",
+        "@vocab": "https://layeredschemas.org/attribute/",
+        "key": "https://layeredschemas.org/attribute/key",
         "reference": {
-            "@id": "</base>/attribute/reference",
+            "@id": "https://layeredschemas.org/attribute/reference",
             "@type": "@id"
         },
         "arrayItems": {
-            "@id": "</base>/attribute/arrayItems"
+            "@id": "https://layeredschemas.org/attribute/arrayItems"
         },
         "allOf": {
-            "@id": "</base>/attribute/allOf",
+            "@id": "https://layeredschemas.org/attribute/allOf",
             "@container": "@list"
         },
         "oneOf": {
-            "@id": "</base>/attribute/oneOf",
+            "@id": "https://layeredschemas.org/attribute/oneOf",
             "@container": "@list"
         },
         "flags": {
-            "@id": "</base>/attribute/flags",
+            "@id": "https://layeredschemas.org/attribute/flags",
             "@type": "@id",
             "@container": "@set"
         },
         "attributeName": {
-            "@id": "</base>/attribute/name"
+            "@id": "https://layeredschemas.org/attribute/name"
         },
         "encoding": {
-            "@id": "</base>/attribute/encoding"
+            "@id": "https://layeredschemas.org/attribute/encoding"
         },
         "type": {
-            "@id": "</base>/attribute/type"
+            "@id": "https://layeredschemas.org/attribute/type"
         },
         "format": {
-            "@id": "</base>/attribute/format"
+            "@id": "https://layeredschemas.org/attribute/format"
         },
         "pattern": {
-            "@id": "</base>/attribute/pattern"
+            "@id": "https://layeredschemas.org/attribute/pattern"
         },
         "label": {
-            "@id": "</base>/attribute/label"
+            "@id": "https://layeredschemas.org/attribute/label"
         },
         "information": {
-            "@id": "</base>/attribute/information"
+            "@id": "https://layeredschemas.org/attribute/information"
         },
         "enumeration": {
-            "@id": "</base>/attribute/enumeration"
+            "@id": "https://layeredschemas.org/attribute/enumeration"
         }
     }
 }
 ```
 
-  * `key`: Specifies the key for the attribute. It must be unique in
-    the context it is defined. Keys are similar to the object keys of
-    a JSON document, with the difference that array elements or
-    references may have keys as well. These are used to match overlay
-    components specific to a key.
+  * `@id`: Specifies the id for the attribute. It must be unique in
+    the schema it is defined in. 
   * `reference`: Specifies another object referenced by this object
   * `arrayItems`: If the defined attributes is an array, `arrayItems`
     specifies the structure of one element.
@@ -171,38 +170,49 @@ properties of the attributes.
 
 #### Examples
 
-A simple value is represented as:
+A simple key/value pair is represented as:
 
 ```
-{
-  "key": "<key_value>"
+"attributes": {
+   "<key>": {},
+   ...
 }
 ```
-
-The `key_value` is the value assigned to this attribute by the schema
-author. Localized names can be given to this key using an overlay with term:
-
-```
-{
-   "key": "<key_value>",
-   "attributeName": "name"
-}
-```
-
-All key values are unique within the container they are defined
-in. Same key values can be used to refer to different attributes in
-nested fields. That is:
+or
 
 ```
 "attributes": [
   {
-    "key": "name"
+    "@id": "<key>"
+  },
+  ...
+]
+```
+
+The `key` is the value assigned to this attribute by the schema
+author. Localized names can be given to this key using an overlay with term:
+
+```
+{
+   "@id": "<key>",
+   "attributeName": "name"
+}
+```
+
+Nested objects can be defined for keys:
+
+```
+"attributes": [
+  {
+    "@id": "name1",
+    "attributeName": "name"
   },
   {
-    "key": "obj",
+    "@id": "obj",
     "attributes": [
        {
-         "key": "name"
+         "@id": "name2",
+         "attributeName": "name"
        }
     ]
   }
@@ -220,13 +230,14 @@ The above schema defines the following JSON document:
 }
 ```
 
-The `name` and `obj.name` refer to two different attributes.
+The `name` and `obj.name` refer to two different attributes with ids
+"name1" and "name2" respectively.
 
 An attribute can be flagged:
 
 ```
     {
-      "key": "nfijh9i38ceSa",
+      "@id": "nfijh9i38ceSa",
       "flags": ["https://someOntology/PII"]
     }
 ```
@@ -237,7 +248,7 @@ An attribute can be a reference to another schema base:
 
 ```
 {
-   "key": "patient",
+   "@id": "patient",
    "reference": "http://someSite/Patient"
 }
 ```
@@ -249,10 +260,10 @@ An attribute can be a nested object:
 
 ```
 {
-   "key": "nestedObject",
+   "@id": "nestedObject",
    "attributes": [
       {
-        "key": "nestedAttribute"
+        "@id": "nestedAttribute"
       },
       ...
    ]
@@ -263,8 +274,8 @@ An attribute can be an array whose items can be described in the schema base:
 
 ```
 {
-  "key": "valueArray",
-  "items": {}
+  "@id": "valueArray",
+  "arrayItems": {}
 }
 ```
 
@@ -276,11 +287,11 @@ Instance:
 
 ```
 {
-  "key": "objectArray",
-  "items": {
+  "@id": "objectArray",
+  "arrayItems": {
      "attributes": [
         {
-          "key": "key1"
+          "@id": "key1"
         }
      ]
   }
@@ -300,7 +311,7 @@ An attribute can be the composition of multiple objects:
 
 ```
 {
-  "key": "p1",
+  "@id": "p1",
   "allOf": [
     {
       "reference": "http://someObject"
@@ -308,7 +319,7 @@ An attribute can be the composition of multiple objects:
     {
       "attributes": [
         {
-           "key": "attr"
+           "@id": "attr"
         }
       ]
     }
@@ -323,7 +334,7 @@ An attribute can be a polymorphic value:
 
 ```
 {
-   "key": "p2",
+   "@id": "p2",
    "oneOf": [
      {
       "reference": "http://obj1"
@@ -346,12 +357,10 @@ The suggested overlay format is as follows:
 
 ```
 {
-  "@context": "<base>/layered.jsonld",
+  "@context": "https://layeredschemas.org/layered.jsonld",
+  "@type": "Overlay",
   "schemaBase": "baseSchemaRef",
   "attributes": {
-    ...
-  },
-  "schemaPaths": {
     ...
   }
 ```
@@ -365,49 +374,144 @@ name for schema base keys following the same structure are the schema base:
 
 ``` 
 {
-  "@context": "<base>/layered.jsonld",
+  "@context": "https://layeredschemas.org/layered.jsonld",
+  "@type": "Overlay",
   "schemaBase": "<schema base  id>,
   "attributes": [
     {
-      "key": "id_key1",
+      "@id": "id1",
       "attributeName": "name_Key1"
     },
     {
-      "attributes": [
-        {
-          "key": "id_key2",
-          "attributeName": "name_Key2"
-        }
-      ]
-    }
-  ]
-}
-```
-
-The same overlay can also be defined using `schemaPaths` term:
-
-```
-{
-  "@context": "<base>/layered.jsonld",
-  "schemaBase": "<schema base id>",
-  "schemaPaths": [
-    {
-      "schemaPath": "id_key1",
-      "attributeName": "name_Key1"
-    },
-    {
-      "schemaPath": "id_key1.id_key2",
+      "@id": "id2",
       "attributeName": "name_Key2"
     }
   ]
 }
-
 ```
 
-This overlay uses `schemaPath` term that used dot-notation to address
-schema base attributes.
 
 
+## Semantics 
+
+Each term has well-defined semantics that include the meaning and
+operations defined for that term. 
+
+### Term: attributes
+
+The term `attributes` is a container where each node with an @id
+defines a new attribute. An attribute can be one of:
+
+  * Object: An  `attributes` term defines the nested object structure.
+  * Array: An `arrayItems` term defines the structure of each array element.
+  * Reference: A `reference` term links to another object. This can be
+    a pointer to a schema manifest, or a pointer to an object whose
+    schema can be derived based on the current processing context.
+  * Composition: An `allOf` term lists the parts of the object
+  * Polymorphism: A `oneOf` term lists the possible types.
+  * A simple value: If none of the above exists, the value is a simple
+    value.
+    
+The term `attributes` defines a `merge` algorithm that receives two
+`attributes` and combines the contents of matching attributes:
+
+Input 1 :
+```
+"attributes": {
+  "k1": {
+    "flags": ["flag1"]
+  },
+  "k2": {
+    "attributes": {
+      "k3":{}
+    }
+  }
+}
+```
+
+Input 2 :
+```
+"attributes": {
+  "k1": {
+    "flags": [ "flag2" ]
+  },
+  "k3": {
+    "attributeName": "attr3"
+  }
+}
+```
+Result:
+
+```
+"attributes": {
+  "k1": {
+    "flags": [ "flag1", "flag2" ]
+  },
+  "k2": {
+    "attributes": {
+      "k3": {
+        "attributeName": "attr3"
+      }
+    }
+  }
+}
+```
+
+During the merge operation:
+  * If a term is defined as `@set`, their contents are combined
+  * If a term is defined as `@list`, contents of the second input is appended to
+    the first
+  * For non-container terms, terms of input1 and input2 are merged,
+    with input2 terms overwriting matching input1 terms
+
+### Schemas
+
+A schema is a schema base and zero or more overlays. A schema is
+constructed using a "schema manifest" that combines the schema layers:
+
+```
+{
+  "@context": "https://layeredschemas.org/layered.jsonld",
+  "@type": "Schema",
+  "@id": "schema Id",
+  "issuedBy": "...",
+  "issuerRole": "...",
+  "issuedAt": "...",
+  "purpose": "...",
+  "classification": "...",
+  "objectType": "...",
+  "objectVersion": "...",
+  "schemaBase": "link to schema base",
+  "overlays": [
+     "overlay1",
+     "overlay2",
+     ...
+   ]
+}
+```
+
+The schema manifest links a schema base and overlays to create a
+schema that is localized, adopted to a particular
+context/jurisdiction, and versioned. It defines the entity type
+specified by the schema (objectType), the version of the specification
+(objectVersion), and optionally, adds a signature by the schema
+publisher for the schema users to validate.
+
+#### Referencing Schemas
+
+A schema base may include references to other schemas. The overlay
+structure also makes it possible to extend a base schema to include
+references. These references can be
+
+  * A link to a schema manifest using its @id. This link will resolve
+  to a unique schema representing a fixed version of an object.
+  * A link to a schema base. There can be many schemas based on the
+  selected schema base. The selection of the actual schema should be
+  done based on the processing context and metadata associated with
+  schemas. For example, suppose a schema base for object A refers to
+  the schema base for object B. When processing an instance of A in
+  English language schema, only the schemas of B that are in English
+  would be considered.
 
 ## Reference
 
