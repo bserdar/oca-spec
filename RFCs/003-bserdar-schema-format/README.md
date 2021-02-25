@@ -39,7 +39,7 @@ The proposed schema base is as follows:
 
 ```
 {
-  "@context": "https://layeredschemas.org/layered.jsonld",
+  "@context": "http://schemas.cloudprivacylabs.com/layered.jsonld",
   "@type": "SchemaBase",
   "objectType": "someEntity",
   "attributes": {
@@ -75,11 +75,11 @@ semantics and algorithms associated with it.
  
 ```
         "SchemaBase": {
-            "@id": "https://layeredschemas.org/SchemaBase",
+            "@id": "http://schemas.cloudprivacylabs.com/SchemaBase",
             "@context": {
                 "@version": 1.1,
                 "objectType": {
-                    "@id": "https://layeredschemas.org/Schema/objectType",
+                    "@id": "http://schemas.cloudprivacylabs.com/Schema/objectType",
                     "@type": "@id"
                 }
             }
@@ -93,55 +93,55 @@ properties of the attributes.
 
 ```
 "attributes": {
-    "@id": "https://layeredschemas.org/attributes",
+    "@id": "http://schemas.cloudprivacylabs.com/attributes",
     "@container": "@id",
     "@context": {
         "@version": 1.1,
-        "@vocab": "https://layeredschemas.org/attribute/",
-        "key": "https://layeredschemas.org/attribute/key",
+        "@vocab": "http://schemas.cloudprivacylabs.com/attribute/",
+        "key": "http://schemas.cloudprivacylabs.com/attribute/key",
         "reference": {
-            "@id": "https://layeredschemas.org/attribute/reference",
+            "@id": "http://schemas.cloudprivacylabs.com/attribute/reference",
             "@type": "@id"
         },
         "arrayItems": {
-            "@id": "https://layeredschemas.org/attribute/arrayItems"
+            "@id": "http://schemas.cloudprivacylabs.com/attribute/arrayItems"
         },
         "allOf": {
-            "@id": "https://layeredschemas.org/attribute/allOf",
+            "@id": "http://schemas.cloudprivacylabs.com/attribute/allOf",
             "@container": "@list"
         },
         "oneOf": {
-            "@id": "https://layeredschemas.org/attribute/oneOf",
+            "@id": "http://schemas.cloudprivacylabs.com/attribute/oneOf",
             "@container": "@list"
         },
         "flags": {
-            "@id": "https://layeredschemas.org/attribute/flags",
+            "@id": "http://schemas.cloudprivacylabs.com/attribute/flags",
             "@type": "@id",
             "@container": "@set"
         },
         "attributeName": {
-            "@id": "https://layeredschemas.org/attribute/name"
+            "@id": "http://schemas.cloudprivacylabs.com/attribute/name"
         },
         "encoding": {
-            "@id": "https://layeredschemas.org/attribute/encoding"
+            "@id": "http://schemas.cloudprivacylabs.com/attribute/encoding"
         },
         "type": {
-            "@id": "https://layeredschemas.org/attribute/type"
+            "@id": "http://schemas.cloudprivacylabs.com/attribute/type"
         },
         "format": {
-            "@id": "https://layeredschemas.org/attribute/format"
+            "@id": "http://schemas.cloudprivacylabs.com/attribute/format"
         },
         "pattern": {
-            "@id": "https://layeredschemas.org/attribute/pattern"
+            "@id": "http://schemas.cloudprivacylabs.com/attribute/pattern"
         },
         "label": {
-            "@id": "https://layeredschemas.org/attribute/label"
+            "@id": "http://schemas.cloudprivacylabs.com/attribute/label"
         },
         "information": {
-            "@id": "https://layeredschemas.org/attribute/information"
+            "@id": "http://schemas.cloudprivacylabs.com/attribute/information"
         },
         "enumeration": {
-            "@id": "https://layeredschemas.org/attribute/enumeration"
+            "@id": "http://schemas.cloudprivacylabs.com/attribute/enumeration"
         }
     }
 }
@@ -357,7 +357,7 @@ The suggested overlay format is as follows:
 
 ```
 {
-  "@context": "https://layeredschemas.org/layered.jsonld",
+  "@context": "http://schemas.cloudprivacylabs.com/layered.jsonld",
   "@type": "Overlay",
   "schemaBase": "baseSchemaRef",
   "attributes": {
@@ -374,7 +374,7 @@ name for schema base keys following the same structure are the schema base:
 
 ``` 
 {
-  "@context": "https://layeredschemas.org/layered.jsonld",
+  "@context": "http://schemas.cloudprivacylabs.com/layered.jsonld",
   "@type": "Overlay",
   "schemaBase": "<schema base  id>,
   "attributes": [
@@ -471,7 +471,7 @@ constructed using a "schema manifest" that combines the schema layers:
 
 ```
 {
-  "@context": "https://layeredschemas.org/layered.jsonld",
+  "@context": "http://schemas.cloudprivacylabs.com/layered.jsonld",
   "@type": "Schema",
   "@id": "schema Id",
   "issuedBy": "...",
