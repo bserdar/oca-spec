@@ -41,6 +41,7 @@ The proposed schema base is as follows:
 {
   "@context": "http://schemas.cloudprivacylabs.com/layers.jsonld",
   "@type": "SchemaBase",
+  "@id": "http://example.org/someEntity/schemaBase",
   "objectType": "someEntity",
   "attributes": {
     "key1": {},
@@ -58,6 +59,10 @@ The proposed schema base is as follows:
 }
 
 ```
+
+  * `@type`: This is a SchemaBase document
+  * `@id`: The ID for the schema base
+  * `objectType`: The object described by this schema base.
 
 The proposed schema base is a JSON-LD document that can be expanded
 and processed using existing JSON-LD tools. It can refer to other
@@ -398,7 +403,7 @@ The suggested overlay format is as follows:
 {
   "@context": "http://schemas.cloudprivacylabs.com/layers.jsonld",
   "@type": "Overlay",
-  "schemaBase": "baseSchemaRef",
+  "objectType": "someEntity",
   "attributes": {
     ...
   }
@@ -407,6 +412,10 @@ The suggested overlay format is as follows:
 There is no need to specify an overlay type. Each term has associated
 semantics and algorithms that imply the type of operation and metadata
 that is added to the underlying attribute.
+
+  * `type`: This is an Overlay document
+  * `objectType`: The object type that the overlay is for. This
+     indirectly specifies the schema base.
 
 As an example, the following index overlay uses `attributes` to define
 name for schema base keys following the same structure are the schema base:
@@ -530,12 +539,12 @@ constructed using a "schema manifest" that combines the schema layers:
 }
 ```
 
-The schema manifest links a schema base and overlays to create a
-schema that is localized, adopted to a particular
-context/jurisdiction, and versioned. It defines the entity type
-specified by the schema (objectType), the version of the specification
-(objectVersion), and optionally, adds a signature by the schema
-publisher for the schema users to validate.
+The schema links a schema base and overlays to create a schema that is
+localized, adopted to a particular context/jurisdiction, and
+versioned. It defines the entity type specified by the schema
+(objectType), the version of the specification (objectVersion), and
+optionally, adds a signature by the schema publisher for the schema
+users to validate.
 
 #### Referencing Schemas
 
