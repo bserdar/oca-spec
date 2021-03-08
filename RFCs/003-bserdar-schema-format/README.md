@@ -1,4 +1,4 @@
-# JSON-LD Processing of Schema Bases and Overlays
+# JSON-LD Processing of Schema Bases and Overlays to Enable Semantic Processing of Nested Data
 - Authors: Burak Serdar (bserdar@computer.org)
 - Status: [PROPOSED]
 - Status Note: (explanation of current status)
@@ -39,7 +39,7 @@ The proposed schema base is as follows:
 
 ```
 {
-  "@context": "http://schemas.cloudprivacylabs.com/layered.jsonld",
+  "@context": "http://schemas.cloudprivacylabs.com/layers.jsonld",
   "@type": "SchemaBase",
   "objectType": "someEntity",
   "attributes": {
@@ -50,7 +50,7 @@ The proposed schema base is as follows:
       }
     },
     "key3": {
-      "flags": ["https://someOntology/PII"]
+      "privacyClassifications": ["https://someOntology/PII"]
     },
     ...
   ],
@@ -88,8 +88,7 @@ semantics and algorithms associated with it.
 ```
 
 `attributes` term is used in schema bases and overlays. It defines a
-nested attribute structure with some of the terms describing
-properties of the attributes. 
+nested attribute structure: 
 
 ```
 "attributes": {
@@ -97,54 +96,61 @@ properties of the attributes.
     "@container": "@id",
     "@context": {
         "@version": 1.1,
-        "@vocab": "http://schemas.cloudprivacylabs.com/attribute/",
-        "key": "http://schemas.cloudprivacylabs.com/attribute/key",
+        "attributeName": {  
+            "@id": "http://schemas.cloudprivacylabs.com/attribute/name"
+        },
         "reference": {
             "@id": "http://schemas.cloudprivacylabs.com/attribute/reference",
             "@type": "@id"
-        },
+        },  
         "arrayItems": {
-            "@id": "http://schemas.cloudprivacylabs.com/attribute/arrayItems"
+            "@id": "http://schemas.cloudprivacylabs.com/attribute/arrayItems",
+            "@context": {
+                "@version": 1.1,
+                "reference": {
+                    "@id": "http://schemas.cloudprivacylabs.com/attribute/reference",
+                    "@type": "@id"
+                },
+                "allOf": {
+                    "@id": "http://schemas.cloudprivacylabs.com/attribute/allOf",
+                    "@container": "@list",
+                    "@context": {
+                        "@version": 1.1
+                    }
+                },
+                "oneOf": {
+                    "@id": "http://schemas.cloudprivacylabs.com/attribute/oneOf",
+                    "@container": "@list",
+                    "@context": {
+                        "@version": 1.1
+                    }
+                }
+            }
         },
         "allOf": {
             "@id": "http://schemas.cloudprivacylabs.com/attribute/allOf",
-            "@container": "@list"
+            "@container": "@list",
+            "@context": {
+                "@version": 1.1,
+                "reference": {
+                    "@id": "http://schemas.cloudprivacylabs.com/attribute/reference",
+                    "@type": "@id"
+                }
+            }
         },
         "oneOf": {
             "@id": "http://schemas.cloudprivacylabs.com/attribute/oneOf",
-            "@container": "@list"
-        },
-        "flags": {
-            "@id": "http://schemas.cloudprivacylabs.com/attribute/flags",
-            "@type": "@id",
-            "@container": "@set"
-        },
-        "attributeName": {
-            "@id": "http://schemas.cloudprivacylabs.com/attribute/name"
-        },
-        "encoding": {
-            "@id": "http://schemas.cloudprivacylabs.com/attribute/encoding"
-        },
-        "type": {
-            "@id": "http://schemas.cloudprivacylabs.com/attribute/type"
-        },
-        "format": {
-            "@id": "http://schemas.cloudprivacylabs.com/attribute/format"
-        },
-        "pattern": {
-            "@id": "http://schemas.cloudprivacylabs.com/attribute/pattern"
-        },
-        "label": {
-            "@id": "http://schemas.cloudprivacylabs.com/attribute/label"
-        },
-        "information": {
-            "@id": "http://schemas.cloudprivacylabs.com/attribute/information"
-        },
-        "enumeration": {
-            "@id": "http://schemas.cloudprivacylabs.com/attribute/enumeration"
+            "@container": "@list",
+            "@context": {
+                "@version": 1.1,
+                "reference": {
+                    "@id": "http://schemas.cloudprivacylabs.com/attribute/reference",
+                    "@type": "@id"
+                }
+            }
         }
     }
-}
+},
 ```
 
   * `@id`: Specifies the id for the attribute. It must be unique in
@@ -156,10 +162,43 @@ properties of the attributes.
     combination of the contents of the elements of this term.
   * `oneOf`: Specifies polymorphism. The resulting element is one of
     the elements of this term.
-  * `flags`: A set of flags associated with the term. Each flag can
-    belong to an ontology that flags this attributes. This can be
-    privacy/risk classifications, blinding identity, etc.
   * `attributeName`: Name of this attribute as it appears in data.
+  
+```
+"privacyClassification": {
+    "@id": "http://schemas.cloudprivacylabs.com/attribute/privacyClassification",
+    "@type": "@id",
+    "@container": "@set"
+},
+"information": {
+    "@id": "http://schemas.cloudprivacylabs.com/attribute/information"
+},
+"encoding": {
+    "@id": "http://schemas.cloudprivacylabs.com/attribute/encoding"
+},
+"type": {
+    "@id": "http://schemas.cloudprivacylabs.com/attribute/type"
+},
+"format": {
+    "@id": "http://schemas.cloudprivacylabs.com/attribute/format"
+},
+"pattern": {
+    "@id": "http://schemas.cloudprivacylabs.com/attribute/pattern"
+},
+"label": {
+    "@id": "http://schemas.cloudprivacylabs.com/attribute/label"
+},
+"enumeration": {
+    "@id": "http://schemas.cloudprivacylabs.com/attribute/enumeration",
+    "@container": "@list"
+},
+
+```
+  
+  * `privacyClassification`: A set of flags associated with the
+    term. Each flag can belong to an ontology that flags this
+    attributes. This can be privacy/risk classifications, blinding
+    identity, etc.
   * `encoding`: Character encoding for the attribute.
   * `type`: Data type
   * `format`: Expected data format
@@ -233,12 +272,12 @@ The above schema defines the following JSON document:
 The `name` and `obj.name` refer to two different attributes with ids
 "name1" and "name2" respectively.
 
-An attribute can be flagged:
+An attribute has privacy classification:
 
 ```
     {
       "@id": "nfijh9i38ceSa",
-      "flags": ["https://someOntology/PII"]
+      "privacyClassification": ["https://someOntology/PII"]
     }
 ```
 
@@ -357,7 +396,7 @@ The suggested overlay format is as follows:
 
 ```
 {
-  "@context": "http://schemas.cloudprivacylabs.com/layered.jsonld",
+  "@context": "http://schemas.cloudprivacylabs.com/layers.jsonld",
   "@type": "Overlay",
   "schemaBase": "baseSchemaRef",
   "attributes": {
@@ -374,7 +413,7 @@ name for schema base keys following the same structure are the schema base:
 
 ``` 
 {
-  "@context": "http://schemas.cloudprivacylabs.com/layered.jsonld",
+  "@context": "http://schemas.cloudprivacylabs.com/layers.jsonld",
   "@type": "Overlay",
   "schemaBase": "<schema base  id>,
   "attributes": [
@@ -419,7 +458,7 @@ Input 1 :
 ```
 "attributes": {
   "k1": {
-    "flags": ["flag1"]
+    "privacyClassification": ["flag1"]
   },
   "k2": {
     "attributes": {
@@ -433,7 +472,7 @@ Input 2 :
 ```
 "attributes": {
   "k1": {
-    "flags": [ "flag2" ]
+    "privacyClassification": [ "flag2" ]
   },
   "k3": {
     "attributeName": "attr3"
@@ -445,7 +484,7 @@ Result:
 ```
 "attributes": {
   "k1": {
-    "flags": [ "flag1", "flag2" ]
+    "privacyClassification": [ "flag1", "flag2" ]
   },
   "k2": {
     "attributes": {
@@ -458,9 +497,10 @@ Result:
 ```
 
 During the merge operation:
-  * If a term is defined as `@set`, their contents are combined
-  * If a term is defined as `@list`, contents of the second input is appended to
-    the first
+  * Attributes that are defined as `@set` in the context
+    (`privacyClassification`) are combined
+  * If a term is defined as `@list`, contents of the second input is
+    appended to the first
   * For non-container terms, terms of input1 and input2 are merged,
     with input2 terms overwriting matching input1 terms
 
@@ -471,7 +511,7 @@ constructed using a "schema manifest" that combines the schema layers:
 
 ```
 {
-  "@context": "http://schemas.cloudprivacylabs.com/layered.jsonld",
+  "@context": "http://schemas.cloudprivacylabs.com/schema.jsonld",
   "@type": "Schema",
   "@id": "schema Id",
   "issuedBy": "...",
