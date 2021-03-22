@@ -560,10 +560,3 @@ The layered schemas implementation is here:
 
 
 https://github.com/cloudprivacylabs/lsa
-
-
-*Implementation Notes* [may need to include a link to test results](README.md#accepted).
-
-Name / Link | Implementation Notes
---- | ---
- |
