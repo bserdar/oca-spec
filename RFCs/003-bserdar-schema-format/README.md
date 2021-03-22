@@ -1,4 +1,4 @@
-# JSON-LD Processing of Schema Bases and Overlays to Enable Semantic Processing of Nested Data
+# JSON-LD Processing of Schema Layers to Enable Semantic Processing of Nested Data
 - Authors: Burak Serdar (bserdar@computer.org)
 - Status: [PROPOSED]
 - Status Note: (explanation of current status)
@@ -7,11 +7,10 @@
 
 ## Summary
 
-This RFC defines JSON-LD processing for schema bases and overlays to
-enable nested data structure support. With these extensions, OCA
-stacks can use existing schemas in different domains (such as FHIR in
-healthcare) to process data and/or to generate compliant data capture
-forms.
+This RFC defines JSON-LD processing for schema layers to enable nested
+data structure support. With these extensions, OCA stacks can use
+existing schemas in different domains (such as FHIR in healthcare) to
+process data and/or to generate compliant data capture forms.
 
 
 ## Motivation
@@ -21,26 +20,27 @@ structures that are not necessarily flat. Such data structures are
 common for data exchange scenarios, in particular, FHIR for health
 data exchange. FHIR is particularly challenging because of its deeply
 nested and cyclic structure. With these extensions, creating schema
-bases and overlays for FHIR-like standard schemas is possible.
+layers for FHIR-like standard schemas is possible.
 
 Existing OCA specification uses schema bases and overlays without a
 well-defined JSON-LD context. This RFC defines an ontology and the
-associated JSON-LD context for schema bases and overlays. This allows
-precise semantic definitions for schema base and overlay terms and
-functionality associated with those terms. It also removes unnecesary
-information such as overlay types, because the well-defined ontology
-already provides that information.
+associated JSON-LD context for schemas and schema layers. This allows
+precise semantic definitions for schema and layer terms and
+functionality associated with those terms. It also removes the
+unnecesary distinction between schema bases and different types of
+overlays, because a well-defined ontology and the schema that combines
+layers already provide that information.
 
 ## Tutorial
 
-### Schema Base
+### Schema Layer
 
-The proposed schema base is as follows:
+The proposed schema layer is as follows:
 
 ```
 {
   "@context": "http://schemas.cloudprivacylabs.com/layers.jsonld",
-  "@type": "SchemaBase",
+  "@type": "Layer",
   "@id": "http://example.org/someEntity/schemaBase",
   "objectType": "someEntity",
   "attributes": {
@@ -60,27 +60,30 @@ The proposed schema base is as follows:
 
 ```
 
-  * `@type`: This is a SchemaBase document
-  * `@id`: The ID for the schema base
-  * `objectType`: The object described by this schema base.
+  * `@type`: This is a Layer document
+  * `@id`: The ID for the layer
+  * `objectType`: The object described by this layer.
 
-The proposed schema base is a JSON-LD document that can be expanded
-and processed using existing JSON-LD tools. It can refer to other
-schema bases, and optional extensions can be added using additional
-contexts.
+The proposed layer is a JSON-LD document that can be expanded and
+processed using existing JSON-LD tools. It can refer to other schemas,
+and optional extensions can be added using additional contexts.
+
+In this RFC, there is no functional distinction between a schema base
+and an overlay. A schema base is simply the first layer in a schema
+layer stack.
 
 ### @context
 
 The @context defines several types and terms. Each term has specific
 semantics and algorithms associated with it.
 
-`SchemaBase` type is used to describe a schema base. 
+`Layer` type is used to describe a schema layer. 
 
  * objectType: This is the entity type defined by the schema base
  
 ```
-        "SchemaBase": {
-            "@id": "http://schemas.cloudprivacylabs.com/SchemaBase",
+        "Layer": {
+            "@id": "http://schemas.cloudprivacylabs.com/Layer",
             "@context": {
                 "@version": 1.1,
                 "objectType": {
@@ -92,8 +95,8 @@ semantics and algorithms associated with it.
 
 ```
 
-`attributes` term is used in schema bases and overlays. It defines a
-nested attribute structure: 
+`attributes` term is used in schema layers. It defines a nested
+attribute structure:
 
 ```
 "attributes": {
@@ -172,7 +175,6 @@ nested attribute structure:
 ```
 "privacyClassification": {
     "@id": "http://schemas.cloudprivacylabs.com/attribute/privacyClassification",
-    "@type": "@id",
     "@container": "@set"
 },
 "information": {
@@ -288,7 +290,12 @@ An attribute has privacy classification:
 
 For instance, this can be used to flag PII information based on BIT.
 
-An attribute can be a reference to another schema base:
+An attribute can be a reference to another schema. References are
+open-ended, and they can be a
+  
+   * Reference using a DRI
+   * Reference using target object type
+   * Reference using a specific variant of a schema
 
 ```
 {
@@ -298,7 +305,10 @@ An attribute can be a reference to another schema base:
 ```
 
 The above defines the field "patient" to be a "Patient" object, whose
-schema base is given in the `reference` value.
+schema is given in the `reference` value. This is a reference using
+the object type, which does not specify a definite schema, thus an
+application specific schema selection must be done. A reference using
+a DRI would specify a definite schema.
 
 An attribute can be a nested object:
 
@@ -314,7 +324,7 @@ An attribute can be a nested object:
 }
 ```
 
-An attribute can be an array whose items can be described in the schema base:
+An attribute can be an array:
 
 ```
 {
@@ -395,36 +405,20 @@ This describes the `p2` attribute as either `http://obj1` or
 
 
 
-### Overlays
+### Layers as Overlays
 
-The suggested overlay format is as follows:
-
-```
-{
-  "@context": "http://schemas.cloudprivacylabs.com/layers.jsonld",
-  "@type": "Overlay",
-  "objectType": "someEntity",
-  "attributes": {
-    ...
-  }
-```
-
-There is no need to specify an overlay type. Each term has associated
+Overlays are simply layers. There is no functional or structural
+difference between layers. Each term used in a layer has associated
 semantics and algorithms that imply the type of operation and metadata
 that is added to the underlying attribute.
 
-  * `type`: This is an Overlay document
-  * `objectType`: The object type that the overlay is for. This
-     indirectly specifies the schema base.
-
-As an example, the following index overlay uses `attributes` to define
-name for schema base keys following the same structure are the schema base:
+As an example, the following index layer uses `attributes` to define
+name for schema keys:
 
 ``` 
 {
   "@context": "http://schemas.cloudprivacylabs.com/layers.jsonld",
-  "@type": "Overlay",
-  "schemaBase": "<schema base  id>,
+  "@type": "Layer",
   "attributes": [
     {
       "@id": "id1",
@@ -437,7 +431,6 @@ name for schema base keys following the same structure are the schema base:
   ]
 }
 ```
-
 
 
 ## Semantics 
@@ -515,8 +508,7 @@ During the merge operation:
 
 ### Schemas
 
-A schema is a schema base and zero or more overlays. A schema is
-constructed using a "schema manifest" that combines the schema layers:
+A schema specifies one of more schema layers:
 
 ```
 {
@@ -530,16 +522,15 @@ constructed using a "schema manifest" that combines the schema layers:
   "classification": "...",
   "objectType": "...",
   "objectVersion": "...",
-  "schemaBase": "link to schema base",
-  "overlays": [
-     "overlay1",
-     "overlay2",
+  "layers": [
+     "layer1",
+     "layer2",
      ...
    ]
 }
 ```
 
-The schema links a schema base and overlays to create a schema that is
+The schema combined schema layers to create a schema that is
 localized, adopted to a particular context/jurisdiction, and
 versioned. It defines the entity type specified by the schema
 (objectType), the version of the specification (objectVersion), and
@@ -548,76 +539,28 @@ users to validate.
 
 #### Referencing Schemas
 
-A schema base may include references to other schemas. The overlay
-structure also makes it possible to extend a base schema to include
-references. These references can be
+A schema layer may include references to other schemas. These
+references can be
 
-  * A link to a schema manifest using its @id. This link will resolve
-  to a unique schema representing a fixed version of an object.
-  * A link to a schema base. There can be many schemas based on the
-  selected schema base. The selection of the actual schema should be
-  done based on the processing context and metadata associated with
-  schemas. For example, suppose a schema base for object A refers to
-  the schema base for object B. When processing an instance of A in
-  English language schema, only the schemas of B that are in English
-  would be considered.
-
-## Reference
-
-Provide guidance for implementers, procedures to inform testing,
-interface definitions, formal function prototypes, error codes,
-diagrams, and other technical details that might be looked up.  Strive
-to guarantee that:
-
-- Interactions with other features are clear.
-- Implementation trajectory is well defined.
-- Corner cases are dissected by example.
-
-## Drawbacks
-
-Why should we *not* do this?
-
-## Rationale and alternatives
-
-- Why is this design the best in the space of possible designs?
-- What other designs have been considered and what is the rationale for not
-choosing them?
-- What is the impact of not doing this?
-
-## Prior art
-
-Discuss prior art, both the good and the bad, in relation to this proposal.
-A few examples of what this can include are:
-
-- Does this feature exist in other ecosystems and what experience have
-their community had?
-- For other teams: What lessons can we learn from other attempts?
-- Papers: Are there any published papers or great posts that discuss this?
-If you have some relevant papers to refer to, this can serve as a more detailed
-theoretical background.
-
-This section is intended to encourage you as an author to think about the
-lessons from other implementers, provide readers of your proposal with a
-fuller picture. If there is no prior art, that is fine - your ideas are
-interesting to us whether they are brand new or if they are an adaptation
-from other communities.
-
-Note that while precedent set by other communities is some motivation, it
-does not on its own motivate an enhancement proposal here.
-
-## Unresolved questions
-
-- What parts of the design do you expect to resolve through the
-enhancement proposal process before this gets merged?
-- What parts of the design do you expect to resolve through the
-implementation of this feature before stabilization?
-- What related issues do you consider out of scope for this
-proposal that could be addressed in the future independently of the
-solution that comes out of this doc?
+  * A link to a schema using its @id. This link will resolve to a
+  unique schema representing a fixed version of an object.
+  * A link to a schema using a DRI. This link will resolve to a
+  unique schema representing a fixed version of an object.
+  * A link to a defined object type. There can be many schemas based
+  on the selected object type. The selection of the actual schema
+  should be done based on the processing context and metadata
+  associated with schemas. For example, suppose a schema for object A
+  refers to the schema for object B. When processing an instance of A
+  in English language schema, only the schemas of B that are in
+  English would be considered.
 
 ## Implementations
 
-The following lists the implementations (if any) of this RFC. Please do a pull request to add your implementation. If the implementation is open source, include a link to the repo or to the implementation within the repo.
+The layered schemas implementation is here:
+
+
+https://github.com/cloudprivacylabs/lsa
+
 
 *Implementation Notes* [may need to include a link to test results](README.md#accepted).
 
